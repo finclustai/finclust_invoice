@@ -3,6 +3,8 @@ import { requireUser } from "@/features/auth/current-user";
 import { can } from "@/features/auth/permissions";
 import { InvoiceEditor } from "@/features/invoices/editor/invoice-editor";
 import { listCustomersForPicker, loadInvoice } from "@/features/invoices/queries";
+import { listCatalog } from "@/features/catalog/queries";
+import { listSellerOptions } from "@/features/companies/queries";
 import { listTimeline } from "@/features/invoices/versions";
 
 export const dynamic = "force-dynamic";
@@ -11,10 +13,12 @@ export default async function InvoiceEditorPage({ params }: { params: Promise<{ 
   const user = await requireUser("read");
   const { id } = await params;
 
-  const [invoice, customers, timeline] = await Promise.all([
+  const [invoice, customers, timeline, sellers, catalog] = await Promise.all([
     loadInvoice(id),
     listCustomersForPicker(),
     listTimeline(id),
+    listSellerOptions(),
+    listCatalog(),
   ]);
   if (!invoice) notFound();
 
@@ -28,6 +32,8 @@ export default async function InvoiceEditorPage({ params }: { params: Promise<{ 
       company={invoice.company}
       customers={customers}
       timeline={timeline}
+      sellers={sellers}
+      catalog={catalog}
       // A cancelled invoice keeps its number for the GST series, so it stays
       // readable but must never change.
       canEdit={can(user.role, "write") && invoice.state !== "CANCELLED"}

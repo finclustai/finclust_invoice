@@ -36,6 +36,9 @@ export interface InvoiceRow {
 export interface InvoiceRowWrite {
   /** Always re-derived from issueDate, so moving the date moves the month. */
   period: string;
+  /** The seller. Writing it is what makes the company picker take effect —
+   *  without it the invoice keeps whichever company it was created with. */
+  companyId: string;
   customerId: string | null;
   customerSnapshot: CustomerSnapshot;
   issueDate: Date;
@@ -114,6 +117,7 @@ export function draftToRow(
 ): InvoiceRowWrite {
   return {
     period: periodOf(draft.issueDate),
+    companyId: draft.companyId,
     customerId: draft.customerId,
     customerSnapshot: draft.customer,
     issueDate: new Date(`${draft.issueDate}T00:00:00.000Z`),

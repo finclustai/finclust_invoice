@@ -36,6 +36,12 @@ export async function GET(req: Request) {
   await requireUser("read");
   const url = new URL(req.url);
 
+  if (url.searchParams.get("what") === "companies") {
+    return Response.json(
+      await db.company.findMany({ select: { id: true, name: true, stateCode: true } }),
+    );
+  }
+
   if (url.searchParams.get("what") === "index") {
     return Response.json(
       await db.invoice.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, number: true } }),

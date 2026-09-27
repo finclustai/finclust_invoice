@@ -83,6 +83,15 @@ describe("draftToRow", () => {
       position: 0,
     });
   });
+  it("writes the seller, so switching company on the invoice takes effect", () => {
+    // Left out once, and the company picker silently did nothing: the editor
+    // showed the new seller while every save kept the old one.
+    const { draft } = rowToDraft(row);
+    const moved = { ...draft, companyId: "99999999-9999-4999-8999-999999999999" };
+    const write = draftToRow(moved, calculateInvoice(moved.lines, ctx));
+    expect(write.companyId).toBe("99999999-9999-4999-8999-999999999999");
+  });
+
   it("round-trips through the database types unchanged", () => {
     const { draft } = rowToDraft(row);
     const write = draftToRow(draft, calculateInvoice(draft.lines, ctx));

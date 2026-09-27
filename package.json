@@ -16,7 +16,8 @@
     "check:pdf": "node scripts/check-pdf.mjs",
     "check:editor": "node scripts/check-editor.mjs",
     "check:history": "node scripts/check-history.mjs",
-    "check:customers": "node scripts/check-customers.mjs"
+    "check:customers": "node scripts/check-customers.mjs",
+    "check:companies": "node scripts/check-companies.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

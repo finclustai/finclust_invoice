@@ -66,7 +66,6 @@ export async function createDraftInvoice(): Promise<never> {
       data: {
         ...row,
         number: draftNumber(),
-        companyId: company.id,
         state: "DRAFT",
         createdById: user.id,
         lines: { create: lines },
@@ -89,18 +88,20 @@ export async function saveDraft(
   draft: InvoiceDraft,
 ): Promise<SaveResult> {
   const user = await requireUser("write");
-  const invoice = await db.invoice.findUnique({
-    where: { id },
-    select: { company: { select: { stateCode: true } } },
+  // The seller comes from the draft, not from the row: when the picker has
+  // just changed it, the tax regime must follow the company being saved.
+  const seller = await db.company.findUnique({
+    where: { id: draft.companyId },
+    select: { stateCode: true },
   });
-  if (!invoice) return { ok: false, reason: "missing", problems: ["That invoice no longer exists"] };
+  if (!seller) return { ok: false, reason: "invalid", problems: ["That company no longer exists"] };
 
   try {
     return await writeDraft(db, {
       id,
       expectedVersion,
       draft,
-      sellerStateCode: invoice.company.stateCode,
+      sellerStateCode: seller.stateCode,
       actorId: user.id,
     });
   } catch (error) {
@@ -324,7 +325,6 @@ export async function duplicateInvoice(id: string, options?: { bumpMonths?: bool
       data: {
         ...row,
         number: draftNumber(),
-        companyId: source.companyId,
         state: "DRAFT",
         createdById: user.id,
         lines: { create: lines },

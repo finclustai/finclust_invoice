@@ -11,6 +11,8 @@ import { formatMoney } from "@/domain/money/currency";
 import { CURRENCY_CODES, type CurrencyCode } from "@/domain/money/currency";
 import { buildDocumentProps, type CompanyForPdf } from "@/pdf/props";
 import { changesForVersion, issueInvoice, saveDraft } from "../actions";
+import type { CatalogItem } from "@/features/catalog/queries";
+import type { SellerOption } from "@/features/companies/queries";
 import type { TimelineEntry } from "../versions";
 import { DuplicateButton } from "./duplicate-button";
 import { HistoryDrawer } from "./history-drawer";
@@ -34,6 +36,8 @@ export function InvoiceEditor({
   customers,
   canEdit,
   timeline,
+  sellers,
+  catalog,
 }: {
   id: string;
   number: string;
@@ -44,6 +48,8 @@ export function InvoiceEditor({
   customers: PickableCustomer[];
   canEdit: boolean;
   timeline: TimelineEntry[];
+  sellers: SellerOption[];
+  catalog: CatalogItem[];
 }) {
   const [draft, setDraft] = useState(initialDraft);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
@@ -53,21 +59,30 @@ export function InvoiceEditor({
   const [problems, setProblems] = useState<string[]>([]);
 
   // Every total on the screen and in the PDF comes from here. Nothing is typed.
+  // The invoice's own companyId wins over the one the page happened to load,
+  // so switching seller changes the tax regime and the bank block together.
+  const sellerCompany = useMemo(() => {
+    const picked = sellers.find((s) => s.id === draft.companyId);
+    if (!picked) return company; // archived since, or not in the list
+    const { id: _id, ...details } = picked;
+    return details;
+  }, [sellers, draft.companyId, company]);
+
   const calc = useMemo(
     () =>
       calculateInvoice(draft.lines, {
         currency: draft.currency,
         gstEnabled: draft.gstEnabled,
         taxRateBp: draft.taxRateBp,
-        sellerStateCode: company.stateCode,
+        sellerStateCode: sellerCompany.stateCode,
         placeOfSupplyStateCode: draft.customer.stateCode,
       }),
-    [draft, company.stateCode],
+    [draft, sellerCompany.stateCode],
   );
 
   const docProps = useMemo(
-    () => buildDocumentProps(draft, company, number, state),
-    [draft, company, number, state],
+    () => buildDocumentProps(draft, sellerCompany, number, state),
+    [draft, sellerCompany, number, state],
   );
 
   const save = useAutosave(draft, version, { enabled: canEdit, save: (d, v) => saveDraft(id, v, d) });
@@ -183,6 +198,8 @@ export function InvoiceEditor({
         <div className={`min-h-0 overflow-y-auto p-4 ${tab === "edit" ? "" : "hidden lg:block"}`}>
           <Form
             draft={draft}
+            sellers={sellers}
+            catalog={catalog}
             calc={calc}
             customers={customers}
             disabled={!canEdit}
@@ -226,6 +243,8 @@ function SaveIndicator({ state }: { state: ReturnType<typeof useAutosave> }) {
 
 function Form({
   draft,
+  sellers,
+  catalog,
   calc,
   customers,
   disabled,
@@ -234,6 +253,8 @@ function Form({
   setDraft,
 }: {
   draft: InvoiceDraft;
+  sellers: SellerOption[];
+  catalog: CatalogItem[];
   calc: ReturnType<typeof calculateInvoice<InvoiceDraft["lines"][number]>>;
   customers: PickableCustomer[];
   disabled: boolean;
@@ -243,6 +264,30 @@ function Form({
 }) {
   return (
     <div className="mx-auto max-w-3xl space-y-5">
+      {sellers.length > 1 && (
+        <section className="card p-4">
+          <label>
+            <span className="label">Invoice from</span>
+            <select
+              className="field"
+              value={draft.companyId}
+              disabled={disabled}
+              onChange={(e) => patch({ companyId: e.target.value })}
+            >
+              {sellers.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                  {s.gstin ? ` · ${s.gstin}` : ""}
+                </option>
+              ))}
+            </select>
+            <span className="hint">
+              Changes the GST treatment and the bank details printed on the invoice.
+            </span>
+          </label>
+        </section>
+      )}
+
       <section className="card p-4">
         <h2 className="label">Bill to</h2>
         <CustomerPicker
@@ -330,6 +375,7 @@ function Form({
         </div>
 
         <LineGrid
+          catalog={catalog}
           lines={draft.lines}
           calc={calc}
           currency={draft.currency}

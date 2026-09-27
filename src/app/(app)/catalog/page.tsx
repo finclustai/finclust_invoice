@@ -1,11 +1,12 @@
-import { ComingSoon } from "../coming-soon";
+import { requireUser } from "@/features/auth/current-user";
+import { can } from "@/features/auth/permissions";
+import { CatalogPage } from "@/features/catalog/catalog-page";
+import { listCatalog } from "@/features/catalog/queries";
 
-export default function CatalogPage() {
-  return (
-    <ComingSoon
-      title="Catalog"
-      plan="Plan 4"
-      what="Save the services you bill most often with their usual rate, then drop them into an invoice instead of retyping them."
-    />
-  );
+export const dynamic = "force-dynamic";
+
+export default async function Catalog() {
+  const user = await requireUser("read");
+  const items = await listCatalog();
+  return <CatalogPage items={items} canEdit={can(user.role, "write")} />;
 }
