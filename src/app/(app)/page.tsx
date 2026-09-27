@@ -1,11 +1,11 @@
-import { ComingSoon } from "./coming-soon";
+import { requireUser } from "@/features/auth/current-user";
+import { Dashboard } from "@/features/dashboard/dashboard";
+import { loadDashboard } from "@/features/dashboard/queries";
 
-export default function DashboardPage() {
-  return (
-    <ComingSoon
-      title="Dashboard"
-      plan="Plan 7"
-      what="What you billed this month, what is still outstanding, what is overdue, and the GST you have collected — split by currency."
-    />
-  );
+export const dynamic = "force-dynamic";
+
+export default async function DashboardPage() {
+  await requireUser("read");
+  const { today, currencies } = await loadDashboard();
+  return <Dashboard currencies={currencies} today={today} />;
 }
