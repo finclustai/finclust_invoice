@@ -35,22 +35,22 @@ const CSP = [
 const config: NextConfig = {
   poweredByHeader: false,
   /*
-   * pdfkit, underneath @react-pdf, loads the metrics for the standard PDF
-   * fonts with a require it builds at runtime. Vercel's file tracing follows
-   * imports it can see, so those files were left out of the deployed function
-   * and every invoice failed with "Cannot find module … standard-fonts/
-   * Helvetica.cjs" — while working locally, where node_modules is simply there.
+   * pdfkit, underneath @react-pdf, builds requires at runtime for its font
+   * metrics and glyph tables. Vercel's file tracing follows imports it can
+   * see, so none of that reached the deployed function and every invoice
+   * failed with "Cannot find module ... Helvetica.cjs" — then, once that one
+   * file was added, with a different one from a nested chunks/ directory.
    *
-   * 29 files, 182 KB. Named precisely rather than by a wildcard over the
-   * package: a broad glob here is what made an earlier deploy too large to
-   * upload at all.
+   * The whole package (11 MB) is included rather than the files it happened
+   * to want this time: naming them one at a time is a game that only ends
+   * when a user hits the one still missing.
    */
   outputFileTracingIncludes: Object.fromEntries(
     // Every function that can draw a PDF: the download route, and the two
     // pages whose server actions email or share one.
     ["/invoices/[id]/pdf", "/invoices/[id]", "/invoices"].map((route) => [
       route,
-      ["./node_modules/.pnpm/pdfkit@*/node_modules/pdfkit/js/standard-fonts/*"],
+      ["./node_modules/.pnpm/pdfkit@*/node_modules/pdfkit/**/*"],
     ]),
   ),
   async headers() {
