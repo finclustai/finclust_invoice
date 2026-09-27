@@ -146,10 +146,97 @@
     box-shadow: 0 0 0 3px var(--orange-tint);
   }
 
+  /* A compact variant, rather than shouting !important over .field. */
+  .field-sm {
+    min-height: 32px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+  }
+
   .card {
     background: var(--paper);
     border: 1px solid var(--line);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-soft);
+  }
+
+  .label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--body);
+    margin-bottom: 0.3rem;
+  }
+  .hint {
+    font-size: 0.75rem;
+    color: var(--mid);
+    margin-top: 0.25rem;
+  }
+  .error-line {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: var(--radius-input);
+    background: var(--red-tint);
+    color: var(--red);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 9999px;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  /* One lookup table for status colour, so no ternaries scatter through JSX. */
+  .status-draft {
+    background: var(--sand);
+    color: var(--mid);
+  }
+  .status-sent {
+    background: var(--orange-tint);
+    color: #9a4d00;
+  }
+  .status-partial {
+    background: var(--orange-tint);
+    color: #9a4d00;
+  }
+  .status-paid {
+    background: var(--green-tint);
+    color: #14663a;
+  }
+  .status-overdue {
+    background: var(--red-tint);
+    color: var(--red);
+  }
+  .status-cancelled {
+    background: var(--sand);
+    color: var(--placeholder);
+    text-decoration: line-through;
+  }
+
+  /* Sidebar navigation */
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    border-radius: var(--radius-input);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--body);
+    transition: background-color 120ms ease-out;
+  }
+  .nav-link:hover {
+    background: var(--sand);
+  }
+  .nav-link[aria-current="page"] {
+    background: var(--orange-tint);
+    color: var(--ink);
   }
 }

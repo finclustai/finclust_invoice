@@ -1,8 +1,11 @@
-export default function Home() {
+import { ComingSoon } from "./coming-soon";
+
+export default function DashboardPage() {
   return (
-    <main className="mx-auto max-w-5xl p-8">
-      <h1 className="text-3xl">Welcome</h1>
-      <p className="mt-2 text-body">The invoice editor arrives in Plan 2.</p>
-    </main>
+    <ComingSoon
+      title="Dashboard"
+      plan="Plan 7"
+      what="What you billed this month, what is still outstanding, what is overdue, and the GST you have collected — split by currency."
+    />
   );
 }
