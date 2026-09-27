@@ -48,6 +48,11 @@ function below1000(n: number): string {
 }
 
 export function integerToWords(n: number, system: "indian" | "international"): string {
+  // Without this a negative recurses forever: Math.floor(-1 / 1e7) is -1, which
+  // is truthy, and the remainder never shrinks. A fraction silently returns "".
+  if (!Number.isSafeInteger(n) || n < 0) {
+    throw new RangeError(`Expected a non-negative whole number, got ${n}`);
+  }
   if (n === 0) return "Zero";
   const parts: string[] = [];
   let remaining = n;
@@ -64,6 +69,9 @@ export function integerToWords(n: number, system: "indian" | "international"): s
 }
 
 export function amountInWords(minor: number, currency: CurrencyCode): string {
+  if (!Number.isSafeInteger(minor) || minor < 0) {
+    throw new RangeError(`Expected a non-negative whole number of minor units, got ${minor}`);
+  }
   const { system, major, minor: minorName } = CURRENCIES[currency].words;
   const whole = Math.floor(minor / 100);
   const fraction = minor % 100;

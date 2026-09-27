@@ -51,6 +51,15 @@ describe("tax regime", () => {
     expect(result.totalMinor).toBe(118000);
   });
 
+  it("a non-INR invoice is an export even when a place of supply is set", () => {
+    // An overseas customer whose stateCode was filled in by mistake must not be
+    // charged IGST: the spec's rule is "export OR non-INR invoice".
+    const result = calculateInvoice([line(211)], inr({ currency: "USD", placeOfSupplyStateCode: "33" }));
+    expect(result.regime).toBe("export");
+    expect(result.taxes).toEqual([]);
+    expect(result.totalMinor).toBe(21100);
+  });
+
   it("unregistered Indian customer still follows place of supply", () => {
     // No GSTIN is involved at all: only the state code matters.
     expect(taxRegime(inr({ placeOfSupplyStateCode: "27" }))).toBe("inter");

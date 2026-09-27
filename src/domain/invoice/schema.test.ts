@@ -65,6 +65,23 @@ describe("invoiceDraftSchema", () => {
     const d = draft({ customer: { ...draft().customer, gstin: "BAD" } });
     expect(invoiceDraftSchema.safeParse(d).success).toBe(false);
   });
+
+  it("rejects a place of supply that contradicts the GSTIN", () => {
+    // 33… is Tamil Nadu; claiming Karnataka would charge CGST+SGST against a
+    // Karnataka seller on a supply that is actually inter-state.
+    const d = draft({ customer: { ...draft().customer, gstin: "33AAGCA7303P1ZK", stateCode: "29" } });
+    expect(invoiceDraftSchema.safeParse(d).success).toBe(false);
+  });
+
+  it("rejects a GSTIN with no place of supply at all", () => {
+    const d = draft({ customer: { ...draft().customer, gstin: "33AAGCA7303P1ZK", stateCode: null } });
+    expect(invoiceDraftSchema.safeParse(d).success).toBe(false);
+  });
+
+  it("still allows an unregistered Indian customer (state, no GSTIN)", () => {
+    const d = draft({ customer: { ...draft().customer, gstin: null, stateCode: "27" } });
+    expect(invoiceDraftSchema.safeParse(d).success).toBe(true);
+  });
 });
 
 describe("validateForIssue", () => {
@@ -88,6 +105,30 @@ describe("validateForIssue", () => {
     ]);
   });
   it("requires at least one line", () => {
-    expect(validateForIssue(draft({ lines: [] }))).toEqual(["Add at least one line item"]);
+    expect(validateForIssue(draft({ lines: [] }))).toEqual([
+      "Add at least one line item",
+      "The invoice total is zero — enter an amount",
+    ]);
+  });
+
+  it("refuses to issue an invoice worth nothing", () => {
+    // Tabbing past the rate column must not burn a number from the GST series.
+    const problems = validateForIssue(
+      draft({ lines: [{ id: "a", description: "Consulting", hsnSac: null, qty: 1, rateMinor: 0 }] }),
+    );
+    expect(problems).toEqual(["The invoice total is zero — enter an amount"]);
+  });
+
+  it("refuses to issue a GST invoice with no place of supply", () => {
+    // Without a state code the regime silently falls back to export and drops 18%.
+    const problems = validateForIssue(draft({ customer: { ...draft().customer, gstin: null, stateCode: null } }));
+    expect(problems).toEqual(["Set the customer's state (place of supply) before issuing"]);
+  });
+
+  it("does not demand a place of supply on an export invoice", () => {
+    const problems = validateForIssue(
+      draft({ currency: "USD", customer: { ...draft().customer, gstin: null, stateCode: null } }),
+    );
+    expect(problems).toEqual([]);
   });
 });

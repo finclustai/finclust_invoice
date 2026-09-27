@@ -8,7 +8,9 @@ export function deriveStatus(
 ): InvoiceStatus {
   if (inv.state === "CANCELLED") return "cancelled";
   if (inv.state === "DRAFT") return "draft";
-  if (inv.paidMinor >= inv.totalMinor) return "paid";
+  // The totalMinor > 0 guard stops a zero-value invoice reporting itself as
+  // paid (0 >= 0) and dropping off everyone's follow-up list.
+  if (inv.totalMinor > 0 && inv.paidMinor >= inv.totalMinor) return "paid";
   if (inv.dueDate !== null && today > inv.dueDate) return "overdue";
   return inv.paidMinor > 0 ? "partial" : "sent";
 }

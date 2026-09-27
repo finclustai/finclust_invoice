@@ -37,7 +37,10 @@ export interface CalculatedInvoice<L extends CalcLine> {
 }
 
 export function taxRegime(ctx: TaxContext): TaxRegime {
-  if (ctx.placeOfSupplyStateCode === null) return "export";
+  // Either condition makes it a supply under LUT without payment of IGST. The
+  // currency test matters on its own: an overseas customer whose state code was
+  // filled in by mistake must not be charged IGST on a dollar invoice.
+  if (ctx.currency !== "INR" || ctx.placeOfSupplyStateCode === null) return "export";
   if (!ctx.gstEnabled) return "none";
   return ctx.placeOfSupplyStateCode === ctx.sellerStateCode ? "intra" : "inter";
 }

@@ -19,7 +19,19 @@ describe("integerToWords", () => {
   });
 });
 
+describe("integerToWords rejects what it cannot spell", () => {
+  // Without this guard a negative loops forever: Math.floor(-1/1e7) is -1 and
+  // the remainder never shrinks, so the recursion never terminates.
+  it.each([-1, -5000, 1.5, NaN, Infinity])("throws on %p", (n) => {
+    expect(() => integerToWords(n, "indian")).toThrow(/whole number/i);
+  });
+});
+
 describe("amountInWords", () => {
+  it.each([-5000, 100.5, NaN])("throws on %p rather than printing nonsense", (minor) => {
+    expect(() => amountInWords(minor, "INR")).toThrow(/whole number/i);
+  });
+
   it("writes rupees and paise", () => {
     expect(amountInWords(33868360, "INR")).toBe(
       "Rupees Three Lakh Thirty Eight Thousand Six Hundred Eighty Three and Sixty Paise Only",

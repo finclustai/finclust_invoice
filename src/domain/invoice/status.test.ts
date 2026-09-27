@@ -19,4 +19,8 @@ describe("deriveStatus", () => {
   ])("%o → %s", (inv, status) => {
     expect(deriveStatus(inv, today)).toBe(status);
   });
+
+  it("a zero-total invoice is not 'paid' just because 0 >= 0", () => {
+    expect(deriveStatus({ ...base, totalMinor: 0, paidMinor: 0 }, today)).toBe("sent");
+  });
 });
