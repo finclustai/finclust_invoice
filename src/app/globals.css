@@ -55,6 +55,18 @@
 }
 
 @layer base {
+  /* Someone who has asked their system to reduce motion means it: the pulse on
+     a loading skeleton is decoration, and decoration is what they turned off. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
     overflow-x: hidden;
@@ -158,6 +170,26 @@
     min-height: 32px;
     padding: 0.25rem 0.5rem;
     font-size: 0.875rem;
+  }
+
+  /* Anything that can be clicked says so before it is clicked. */
+  .btn:focus-visible,
+  .field:focus-visible,
+  .nav-link:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  /* A row that leads somewhere lifts very slightly under the pointer; enough
+     to feel alive, not enough to shift the layout. */
+  a.card {
+    transition:
+      border-color 140ms ease-out,
+      box-shadow 140ms ease-out;
+  }
+  a.card:hover {
+    border-color: var(--line-strong);
+    box-shadow: 0 2px 6px rgb(21 20 15 / 0.07);
   }
 
   .card {

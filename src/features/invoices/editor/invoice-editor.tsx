@@ -124,11 +124,14 @@ export function InvoiceEditor({
 
   return (
     <div className="flex h-dvh flex-col">
-      <header className="flex flex-wrap items-center gap-3 border-b border-line bg-paper px-4 py-2.5">
+      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b border-line bg-paper/95 px-4 py-2.5 backdrop-blur">
         <Link href="/invoices" className="btn field-sm" aria-label="Back to invoices">
           <ArrowLeft size={15} aria-hidden />
         </Link>
-        <span className="font-mono text-sm font-bold">{state === "DRAFT" ? "Draft" : number}</span>
+        <span className="flex items-baseline gap-2">
+          <span className="font-mono text-sm font-bold">{state === "DRAFT" ? "Draft" : number}</span>
+          {state === "CANCELLED" && <span className="chip status-cancelled">Cancelled</span>}
+        </span>
         <SaveIndicator state={save} />
 
         <div className="ml-auto flex items-center gap-2">

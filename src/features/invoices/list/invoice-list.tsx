@@ -63,11 +63,29 @@ export function InvoiceList({
       </div>
 
       {invoices.length === 0 ? (
-        <div className="card p-8 text-center">
-          <h2 className="font-extrabold">No invoices here</h2>
-          <p className="mt-1 text-sm text-body">
-            {q || period ? "Try a different month, or clear the search." : "Create your first invoice to get started."}
-          </p>
+        <div className="card p-10 text-center">
+          {q || period ? (
+            <>
+              <h2 className="font-extrabold">Nothing matches</h2>
+              <p className="mt-1 text-sm text-body">Try another month, or clear the search.</p>
+              <Link href="/invoices" className="btn field-sm mt-4">
+                Show everything
+              </Link>
+            </>
+          ) : (
+            <>
+              <h2 className="text-lg font-extrabold">Write your first invoice</h2>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-body">
+                Pick a customer, type the lines, and watch the invoice take shape beside you. It
+                takes a number only when you issue it, so nothing is wasted while you work.
+              </p>
+              {canCreate && (
+                <span className="mt-5 inline-block">
+                  <NewInvoiceButton />
+                </span>
+              )}
+            </>
+          )}
         </div>
       ) : (
         <>
