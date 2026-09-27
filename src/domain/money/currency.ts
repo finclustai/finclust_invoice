@@ -19,6 +19,15 @@ export function formatMoney(minor: number, currency: CurrencyCode): string {
   return new Intl.NumberFormat(locale, { style: "currency", currency: code }).format(minor / 100);
 }
 
+/**
+ * "INR 3,38,683.60". For the PDF, which uses the standard Helvetica font:
+ * WinAnsi has no ₹ (U+20B9), so the symbol would print as an empty box. The
+ * invoices FINCLUST already sends write the code too, so this is faithful.
+ */
+export function formatMoneyWithCode(minor: number, currency: CurrencyCode): string {
+  return `${currency} ${formatAmount(minor, currency)}`;
+}
+
 export function formatAmount(minor: number, currency: CurrencyCode): string {
   return new Intl.NumberFormat(CURRENCIES[currency].locale, {
     minimumFractionDigits: 2,

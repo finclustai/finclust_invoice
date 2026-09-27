@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAmount, formatMoney, parseMoney } from "./currency";
+import { formatAmount, formatMoney, formatMoneyWithCode, parseMoney } from "./currency";
 
 describe("formatMoney", () => {
   it("uses Indian lakh grouping for INR", () => {
@@ -7,6 +7,21 @@ describe("formatMoney", () => {
   });
   it("uses western grouping for USD", () => {
     expect(formatMoney(132600, "USD")).toBe("$1,326.00");
+  });
+});
+
+describe("formatMoneyWithCode", () => {
+  // The PDF uses the standard Helvetica font, whose WinAnsi encoding has no ₹
+  // (U+20B9): the symbol would print as an empty box. The original invoices
+  // write "INR 3,38,683.60" anyway, so the code is both safe and faithful.
+  it("writes the currency code instead of the symbol", () => {
+    expect(formatMoneyWithCode(33868360, "INR")).toBe("INR 3,38,683.60");
+    expect(formatMoneyWithCode(132600, "USD")).toBe("USD 1,326.00");
+  });
+  it("never emits a character outside Latin-1", () => {
+    for (const s of [formatMoneyWithCode(33868360, "INR"), formatMoneyWithCode(132600, "USD")]) {
+      expect(s).toMatch(/^[\x20-\x7e]+$/);
+    }
   });
 });
 
