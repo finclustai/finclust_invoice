@@ -16,6 +16,7 @@ import type { SellerOption } from "@/features/companies/queries";
 import type { TimelineEntry } from "../versions";
 import { DuplicateButton } from "./duplicate-button";
 import { HistoryDrawer } from "./history-drawer";
+import { SendButton } from "./send-dialog";
 import { CustomerPicker, snapshotOf, type PickableCustomer } from "./customer-picker";
 import { LineGrid } from "./line-grid";
 import { useAutosave } from "./use-autosave";
@@ -38,6 +39,7 @@ export function InvoiceEditor({
   timeline,
   sellers,
   catalog,
+  canSend,
 }: {
   id: string;
   number: string;
@@ -50,6 +52,7 @@ export function InvoiceEditor({
   timeline: TimelineEntry[];
   sellers: SellerOption[];
   catalog: CatalogItem[];
+  canSend: boolean;
 }) {
   const [draft, setDraft] = useState(initialDraft);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
@@ -119,6 +122,7 @@ export function InvoiceEditor({
         <SaveIndicator state={save} />
 
         <div className="ml-auto flex items-center gap-2">
+          {canSend && <SendButton invoiceId={id} disabled={state === "DRAFT"} />}
           {canEdit && <DuplicateButton descriptions={draft.lines.map((l) => l.description)} />}
           <button className="btn field-sm" onClick={() => setShowHistory(true)}>
             <History size={15} aria-hidden />

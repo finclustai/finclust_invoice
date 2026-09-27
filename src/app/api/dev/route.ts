@@ -2,6 +2,7 @@ import { requireUser } from "@/features/auth/current-user";
 import { AuthError } from "@/features/auth/permissions";
 import { saveCustomer } from "@/features/customers/actions";
 import { issueInvoice, restoreVersion, saveDraft } from "@/features/invoices/actions";
+import { prepareSend, sendInvoice } from "@/features/invoices/send";
 import { listTimeline } from "@/features/invoices/versions";
 import { db } from "@/infra/db";
 
@@ -21,7 +22,7 @@ import { db } from "@/infra/db";
  */
 const DISABLED = process.env.NODE_ENV === "production" || process.env.ENABLE_DEV_TEST_HOOKS !== "1";
 
-const ACTIONS = { saveDraft, issueInvoice, restoreVersion } as const;
+const ACTIONS = { saveDraft, issueInvoice, restoreVersion, prepareSend, sendInvoice } as const;
 
 /** saveCustomer takes FormData, so the scripts send plain fields. */
 async function saveCustomerFields(id: string | null, fields: Record<string, string>) {

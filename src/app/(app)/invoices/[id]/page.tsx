@@ -34,6 +34,7 @@ export default async function InvoiceEditorPage({ params }: { params: Promise<{ 
       timeline={timeline}
       sellers={sellers}
       catalog={catalog}
+      canSend={can(user.role, "send")}
       // A cancelled invoice keeps its number for the GST series, so it stays
       // readable but must never change.
       canEdit={can(user.role, "write") && invoice.state !== "CANCELLED"}
