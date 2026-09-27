@@ -34,6 +34,27 @@ const CSP = [
 
 const config: NextConfig = {
   poweredByHeader: false,
+  /*
+   * @react-pdf reaches for "@react-pdf/hyphenate/en-us", a subpath its own
+   * package.json never declares in `exports`. A bundler resolves it by falling
+   * back to the file path; Node's native resolver refuses. Keeping the library
+   * bundled rather than left as a runtime require is what keeps the PDF
+   * renderer working on a serverless deploy, where it is otherwise loaded the
+   * strict way and throws ERR_PACKAGE_PATH_NOT_EXPORTED.
+   */
+  outputFileTracingIncludes: {
+    "/invoices/[id]/pdf": ["./node_modules/.pnpm/@react-pdf+**/**/*"],
+  },
+  webpack: (webpackConfig, { isServer }) => {
+    if (isServer) {
+      // Never externalise it: an external import is resolved by Node, which is
+      // exactly the resolution that fails.
+      webpackConfig.externals = (webpackConfig.externals ?? []).filter(
+        (external: unknown) => typeof external !== "string" || !external.includes("@react-pdf"),
+      );
+    }
+    return webpackConfig;
+  },
   async headers() {
     return [
       {
