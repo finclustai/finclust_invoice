@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+/*
+ * "Evolved FINCLUST": the career site's warm palette (E:\sudheer\design-system\finclust\MASTER.md)
+ * made calmer for a dense daily tool: 1px soft borders and soft shadows instead
+ * of hard ink offsets. Components never carry raw hex values; they use these tokens.
+ */
+:root {
+  --paper: #ffffff;
+  --shell: #fffdf8;
+  --sand: #f9f6ee;
+  --ink: #15140f;
+  --body: #4a463d;
+  --mid: #6b665c;
+  --placeholder: #9b958a;
+  --line: #e7e1d3;
+  --line-strong: #d6cebb;
+  --orange: #ff8a1e;
+  --orange-tint: #fff1e2;
+  --green: #1f9d5a;
+  --green-tint: #e3f7ec;
+  --red: #e0352b;
+  --red-tint: #fde7e5;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1c1b17;
+    --shell: #141310;
+    --sand: #24221d;
+    --ink: #f4f1e8;
+    --body: #cfc9bb;
+    --mid: #a39d90;
+    --placeholder: #7a7568;
+    --line: #34312a;
+    --line-strong: #4a463d;
+    --orange: #ff9a3d;
+    --orange-tint: #3a2a18;
+    --green: #3dd68c;
+    --green-tint: #173226;
+    --red: #ff6b61;
+    --red-tint: #3a1d1b;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-shell: var(--shell);
+  --color-sand: var(--sand);
+  --color-ink: var(--ink);
+  --color-body: var(--body);
+  --color-mid: var(--mid);
+  --color-placeholder: var(--placeholder);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-orange: var(--orange);
+  --color-orange-tint: var(--orange-tint);
+  --color-green: var(--green);
+  --color-green-tint: var(--green-tint);
+  --color-red: var(--red);
+  --color-red-tint: var(--red-tint);
+
+  --radius-input: 8px;
+  --radius-card: 12px;
+  --radius-modal: 16px;
+
+  --shadow-soft: 0 1px 2px rgb(21 20 15 / 0.06), 0 1px 1px rgb(21 20 15 / 0.04);
+  --shadow-pop: 0 8px 24px rgb(21 20 15 / 0.12), 0 2px 6px rgb(21 20 15 / 0.08);
+
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
+  body {
+    background: var(--shell);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+  h1,
+  h2,
+  h3 {
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    font-weight: 800;
+  }
+  /* Ink outline, not an orange ring: orange on white is only 2.35:1. */
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  .tnum,
+  input[type="number"] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 40px;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-input);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--shadow-soft);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition:
+      background-color 150ms ease-out,
+      transform 100ms ease-out,
+      border-color 150ms ease-out;
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--sand);
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  /* Ink label on orange, never white (contrast). */
+  .btn-primary {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: #15140f;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #ff9c3d;
+  }
+
+  .field {
+    width: 100%;
+    min-height: 40px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-input);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 0.9375rem;
+    transition:
+      border-color 150ms ease-out,
+      box-shadow 150ms ease-out;
+  }
+  .field::placeholder {
+    color: var(--placeholder);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--ink);
+    box-shadow: 0 0 0 3px var(--orange-tint);
+  }
+
+  .card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
+  }
+}

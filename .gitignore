@@ -3,3 +3,7 @@ node_modules/
 .env*
 !.env.example
 *.pdf
+next-env.d.ts
+*.tsbuildinfo
+.superpowers/
+.next/
