@@ -21,28 +21,9 @@
   --green-tint: #e3f7ec;
   --red: #e0352b;
   --red-tint: #fde7e5;
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #1c1b17;
-    --shell: #141310;
-    --sand: #24221d;
-    --ink: #f4f1e8;
-    --body: #cfc9bb;
-    --mid: #a39d90;
-    --placeholder: #7a7568;
-    --line: #34312a;
-    --line-strong: #4a463d;
-    --orange: #ff9a3d;
-    --orange-tint: #3a2a18;
-    --green: #3dd68c;
-    --green-tint: #173226;
-    --red: #ff6b61;
-    --red-tint: #3a1d1b;
-    color-scheme: dark;
-  }
+  /* Light only, like the career site. Declared so the browser paints form
+     controls and scrollbars light even when the OS is set to dark. */
+  color-scheme: light only;
 }
 
 @theme inline {
