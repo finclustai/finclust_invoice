@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { formatAmount, formatMoney, formatMoneyWithCode, parseMoney } from "./currency";
+import { CURRENCY_CODES, formatAmount, formatMoney, formatMoneyWithCode, parseMoney } from "./currency";
+import { amountInWords } from "./words";
+
+const amountInWordsFor = (code: Parameters<typeof amountInWords>[1]) => amountInWords(12345, code);
 
 describe("formatMoney", () => {
   it("uses Indian lakh grouping for INR", () => {
@@ -49,5 +52,28 @@ describe("parseMoney", () => {
 
   it.each(["", "abc", "1.234", "-5", "1.2.3", "."])("rejects %j", (input) => {
     expect(parseMoney(input)).toBeNull();
+  });
+});
+
+describe("the currencies FINCLUST bills in", () => {
+  it("formats each one without depending on a symbol the PDF font lacks", () => {
+    for (const code of CURRENCY_CODES) {
+      const written = formatMoneyWithCode(123456, code);
+      expect(written.startsWith(`${code} `)).toBe(true);
+      // Helvetica has no rupee or dirham glyph; the code carries the meaning.
+      expect(written).toMatch(/^[\x20-\x7e]+$/);
+    }
+  });
+
+  it("groups Indian amounts in lakhs and every other currency in thousands", () => {
+    expect(formatAmount(10000000, "INR")).toBe("1,00,000.00");
+    for (const code of ["USD", "EUR", "AED", "SGD"] as const) {
+      expect(formatAmount(10000000, code)).toBe("100,000.00");
+    }
+  });
+
+  it("names the minor unit each currency actually uses", () => {
+    expect(amountInWordsFor("AED")).toContain("Fils");
+    expect(amountInWordsFor("EUR")).toContain("Cents");
   });
 });

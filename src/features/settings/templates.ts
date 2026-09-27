@@ -25,16 +25,16 @@ export interface TemplateFormState {
 export async function loadTemplates(): Promise<Record<Audience, EmailTemplate>> {
   const row = await db.setting.findUnique({ where: { key: KEY }, select: { value: true } });
   const stored = (row?.value ?? {}) as Partial<Record<Audience, Partial<EmailTemplate>>>;
-  return {
-    client: {
-      subject: stored.client?.subject?.trim() || DEFAULT_TEMPLATES.client.subject,
-      body: stored.client?.body?.trim() || DEFAULT_TEMPLATES.client.body,
-    },
-    accountant: {
-      subject: stored.accountant?.subject?.trim() || DEFAULT_TEMPLATES.accountant.subject,
-      body: stored.accountant?.body?.trim() || DEFAULT_TEMPLATES.accountant.body,
-    },
-  };
+  const audiences = Object.keys(DEFAULT_TEMPLATES) as Audience[];
+  return Object.fromEntries(
+    audiences.map((audience) => [
+      audience,
+      {
+        subject: stored[audience]?.subject?.trim() || DEFAULT_TEMPLATES[audience].subject,
+        body: stored[audience]?.body?.trim() || DEFAULT_TEMPLATES[audience].body,
+      },
+    ]),
+  ) as Record<Audience, EmailTemplate>;
 }
 
 /** Unbound, with the fields in the form, like the other forms in the app. */
@@ -45,10 +45,10 @@ export async function saveTemplates(
   const user = await requireUser("admin");
   const text = (k: string) => String(form.get(k) ?? "").trim();
 
-  const value: Record<Audience, EmailTemplate> = {
-    client: { subject: text("clientSubject"), body: text("clientBody") },
-    accountant: { subject: text("accountantSubject"), body: text("accountantBody") },
-  };
+  const audiences = Object.keys(DEFAULT_TEMPLATES) as Audience[];
+  const value = Object.fromEntries(
+    audiences.map((a) => [a, { subject: text(`${a}Subject`), body: text(`${a}Body`) }]),
+  ) as Record<Audience, EmailTemplate>;
 
   for (const [audience, template] of Object.entries(value)) {
     if (!template.subject) return { error: `The ${audience} subject can’t be empty` };

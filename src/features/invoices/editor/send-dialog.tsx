@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, ExternalLink, Loader2, Mail, Send } from "lucide-react";
-import type { Audience } from "@/domain/invoice/email";
+import { AUDIENCE_LABEL, type Audience } from "@/domain/invoice/email";
 import { prepareSend, sendInvoice, type SendPrefill } from "../send";
 
 /**
@@ -116,12 +116,7 @@ function SendDialog({ invoiceId, onClose }: { invoiceId: string; onClose: () => 
               read it and press send.
             </p>
             <div className="mt-3 flex gap-1">
-              {(
-                [
-                  ["client", "To the customer"],
-                  ["accountant", "To the accountant"],
-                ] as const
-              ).map(([value, label]) => (
+              {(["client", "accountant"] as const).map((value) => (
                 <button
                   key={value}
                   type="button"
@@ -129,7 +124,7 @@ function SendDialog({ invoiceId, onClose }: { invoiceId: string; onClose: () => 
                   aria-pressed={audience === value}
                   onClick={() => setAudience(value)}
                 >
-                  {label}
+                  {AUDIENCE_LABEL[value].tab}
                 </button>
               ))}
             </div>

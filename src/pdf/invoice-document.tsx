@@ -1,6 +1,7 @@
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { formatAmount, formatMoneyWithCode } from "@/domain/money/currency";
 import type { InvoiceDocumentProps } from "./props";
+import { layoutFor } from "./templates";
 
 /*
  * Classic: the layout FINCLUST already sends, tightened up. Helvetica is a
@@ -31,7 +32,7 @@ const s = StyleSheet.create({
   metaLabel: { fontSize: 7.5, color: MID, letterSpacing: 0.8, textAlign: "right", width: 44 },
   metaValue: { fontSize: 9.5, color: INK, textAlign: "right", width: 110 },
 
-  dueBox: { marginTop: 12, backgroundColor: SAND, borderRadius: 4, paddingVertical: 7, paddingHorizontal: 11, alignSelf: "flex-end", minWidth: 165 },
+  dueBox: { marginTop: 14, alignSelf: "flex-end" },
   dueLabel: { fontSize: 7.5, color: MID, letterSpacing: 0.8, textAlign: "right" },
   dueValue: { fontSize: 14, fontFamily: "Helvetica-Bold", color: INK, textAlign: "right", marginTop: 2 },
 
@@ -69,6 +70,11 @@ const s = StyleSheet.create({
   payName: { fontSize: 9, fontFamily: "Helvetica-Bold", color: INK, marginBottom: 3 },
   payLine: { fontSize: 8.5, color: BODY, marginBottom: 1.5 },
 
+  centredHead: { alignItems: "center", marginBottom: 20 },
+  centredTitleText: { fontSize: 20, fontFamily: "Helvetica-Bold", color: INK, letterSpacing: 3 },
+  centredNumber: { fontSize: 10, fontFamily: "Helvetica-Bold", color: MID, marginTop: 3 },
+  headerNoTitle: { alignItems: "flex-start" },
+
   draft: {
     position: "absolute", top: 300, left: 0, right: 0, textAlign: "center",
     fontSize: 88, fontFamily: "Helvetica-Bold", color: ORANGE, opacity: 0.13, letterSpacing: 10,
@@ -87,6 +93,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 }
 
 export function InvoiceDocument({ doc }: { doc: InvoiceDocumentProps }) {
+  const layout = layoutFor(doc.template);
   const { seller, customer, calc, currency } = doc;
   const amount = (minor: number) => formatAmount(minor, currency);
   const bank = [
@@ -98,10 +105,17 @@ export function InvoiceDocument({ doc }: { doc: InvoiceDocumentProps }) {
 
   return (
     <Document title={doc.number} author={seller.name}>
-      <Page size="A4" style={s.page}>
+      <Page size="A4" style={[s.page, layout.page]}>
         {doc.isDraft && <Text style={s.draft} fixed>DRAFT</Text>}
 
-        <View style={s.header}>
+        {layout.centredTitle && (
+          <View style={s.centredHead}>
+            <Text style={s.centredTitleText}>INVOICE</Text>
+            <Text style={s.centredNumber}>{doc.number}</Text>
+          </View>
+        )}
+
+        <View style={[s.header, layout.centredTitle ? s.headerNoTitle : {}]}>
           <View>
             <Text style={s.sellerName}>{seller.name}</Text>
             {seller.addressLines.map((l, i) => (
@@ -114,8 +128,12 @@ export function InvoiceDocument({ doc }: { doc: InvoiceDocumentProps }) {
           </View>
 
           <View style={s.headerRight}>
-            <Text style={s.title}>Invoice</Text>
-            <Text style={s.number}>{doc.number}</Text>
+            {!layout.centredTitle && (
+              <>
+                <Text style={s.title}>Invoice</Text>
+                <Text style={s.number}>{doc.number}</Text>
+              </>
+            )}
 
             <View style={s.metaTable}>
               <MetaRow label="DATE" value={doc.issueDateLabel} />

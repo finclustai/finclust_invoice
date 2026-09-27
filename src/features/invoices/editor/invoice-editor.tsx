@@ -10,12 +10,14 @@ import type { InvoiceState } from "@/domain/invoice/status";
 import { formatMoney } from "@/domain/money/currency";
 import { CURRENCY_CODES, type CurrencyCode } from "@/domain/money/currency";
 import { buildDocumentProps, type CompanyForPdf } from "@/pdf/props";
+import { TEMPLATE_CHOICES } from "@/pdf/templates";
 import { changesForVersion, issueInvoice, saveDraft } from "../actions";
 import type { CatalogItem } from "@/features/catalog/queries";
 import type { SellerOption } from "@/features/companies/queries";
 import type { PaymentRow } from "../payments";
 import type { ShareLink } from "../share";
 import type { TimelineEntry } from "../versions";
+import { DeleteButton } from "./delete-button";
 import { DuplicateButton } from "./duplicate-button";
 import { HistoryDrawer } from "./history-drawer";
 import { PaymentsPanel } from "./payments-panel";
@@ -133,6 +135,7 @@ export function InvoiceEditor({
           {canSend && <SendButton invoiceId={id} disabled={state === "DRAFT"} />}
           {canSend && <ShareButton invoiceId={id} links={shareLinks} disabled={state === "DRAFT"} />}
           {canEdit && <DuplicateButton descriptions={draft.lines.map((l) => l.description)} />}
+          {canEdit && <DeleteButton invoiceId={id} isDraft={state === "DRAFT"} number={number} />}
           <button className="btn field-sm" onClick={() => setShowHistory(true)}>
             <History size={15} aria-hidden />
             History
@@ -329,7 +332,7 @@ function Form({
         )}
       </section>
 
-      <section className="card grid gap-4 p-4 sm:grid-cols-3">
+      <section className="card grid gap-4 p-4 sm:grid-cols-2">
         <label>
           <span className="label">Invoice date</span>
           <input
@@ -352,6 +355,25 @@ function Form({
           />
           <span className="hint">Optional</span>
         </label>
+        <label>
+          <span className="label">Layout</span>
+          <select
+            className="field"
+            value={draft.template}
+            disabled={disabled}
+            onChange={(e) => patch({ template: e.target.value })}
+          >
+            {TEMPLATE_CHOICES.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <span className="hint">
+            {TEMPLATE_CHOICES.find((t) => t.id === draft.template)?.description}
+          </span>
+        </label>
+
         <label>
           <span className="label">Currency</span>
           <select

@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Loader2, RotateCcw } from "lucide-react";
 import {
+  AUDIENCE_LABEL,
   DEFAULT_TEMPLATES,
   PLACEHOLDER_HELP,
   fillTemplate,
@@ -25,39 +26,38 @@ const SAMPLE = {
 
 export function TemplateEditor({ templates }: { templates: Record<Audience, EmailTemplate> }) {
   const [state, action, pending] = useActionState<TemplateFormState, FormData>(saveTemplates, {});
-  const [client, setClient] = useState(templates.client);
-  const [accountant, setAccountant] = useState(templates.accountant);
+  const [drafts, setDrafts] = useState(templates);
   const [tab, setTab] = useState<Audience>("client");
 
-  const current = tab === "client" ? client : accountant;
-  const setCurrent = tab === "client" ? setClient : setAccountant;
+  const current = drafts[tab];
+  const setCurrent = (next: EmailTemplate) => setDrafts((d) => ({ ...d, [tab]: next }));
   const preview = fillTemplate(current, SAMPLE);
 
   return (
     <form action={action} className="space-y-4">
       {/* Both templates post every time, so switching tabs never loses an edit. */}
-      <input type="hidden" name="clientSubject" value={client.subject} />
-      <input type="hidden" name="clientBody" value={client.body} />
-      <input type="hidden" name="accountantSubject" value={accountant.subject} />
-      <input type="hidden" name="accountantBody" value={accountant.body} />
+      {(Object.keys(drafts) as Audience[]).map((a) => (
+        <div key={a}>
+          <input type="hidden" name={`${a}Subject`} value={drafts[a].subject} />
+          <input type="hidden" name={`${a}Body`} value={drafts[a].body} />
+        </div>
+      ))}
 
-      <div className="flex gap-1">
-        {(
-          [
-            ["client", "To the customer"],
-            ["accountant", "To the accountant"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            className={`chip ${tab === value ? "bg-orange-tint text-ink" : "bg-sand text-body"}`}
-            aria-pressed={tab === value}
-            onClick={() => setTab(value)}
-          >
-            {label}
-          </button>
-        ))}
+      <div>
+        <div className="flex flex-wrap gap-1">
+          {(Object.keys(drafts) as Audience[]).map((a) => (
+            <button
+              key={a}
+              type="button"
+              className={`chip ${tab === a ? "bg-orange-tint text-ink" : "bg-sand text-body"}`}
+              aria-pressed={tab === a}
+              onClick={() => setTab(a)}
+            >
+              {AUDIENCE_LABEL[a].tab}
+            </button>
+          ))}
+        </div>
+        <p className="hint">{AUDIENCE_LABEL[tab].help}</p>
       </div>
 
       <section className="card space-y-3 p-4">
@@ -135,8 +135,7 @@ export function TemplateEditor({ templates }: { templates: Record<Audience, Emai
           onClick={async () => {
             if (!confirm("Put the original wording back? Your changes will be lost.")) return;
             await resetTemplates();
-            setClient(DEFAULT_TEMPLATES.client);
-            setAccountant(DEFAULT_TEMPLATES.accountant);
+            setDrafts(DEFAULT_TEMPLATES);
           }}
         >
           <RotateCcw size={14} aria-hidden />

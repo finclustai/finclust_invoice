@@ -78,13 +78,35 @@ const form = await page("/customers/new");
 check("the state list is real, not free text", form.includes("Karnataka") && form.includes("Tamil Nadu"));
 
 // ---------------------------------------------- renaming must not rewrite history
-const invoices = await (await fetch(`${B}/api/dev?what=index`, { headers: { cookie } })).json();
-const alsum = invoices.find((i) => i.number === "INV2608002");
-check("the seeded ALSUM invoice is there", Boolean(alsum));
-if (!alsum) process.exit(1);
+// Creates what it needs rather than assuming seed data: a check that depends
+// on rows someone else made fails the moment the database is cleared.
+const call = async (action, args) =>
+  (await fetch(`${B}/api/dev`, {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify({ action, args }),
+  })).json();
+
+const createForm = await hiddenFields("/invoices", "New invoice", cookie);
+const created = await fetch(`${B}/invoices`, { method: "POST", body: createForm, headers: { cookie }, redirect: "manual" });
+const newId = ((created.headers.get("location") ?? "").match(/invoices\/([0-9a-f-]{36})/) || [])[1];
+const seedState = await (await fetch(`${B}/api/dev?id=${newId}`, { headers: { cookie } })).json();
+const testDraft = {
+  companyId: seedState.companyId, customerId: null,
+  customer: { name: "ALSUM INFOTECH PRIVATE LIMITED", addressLines: ["Chennai"], gstin: "33AAGCA7303P1ZK", stateCode: "33", emails: ["hr@alsuminfotech.com"] },
+  issueDate: "2026-09-28", dueDate: null, paymentTerms: null,
+  currency: "INR", gstEnabled: true, taxRateBp: 1800, template: "classic", notes: null,
+  lines: [{ id: crypto.randomUUID(), description: "Consulting", hsnSac: null, qty: 1, rateMinor: 10000000 }],
+};
+const savedDraft = await call("saveDraft", [newId, 1, testDraft]);
+await call("issueInvoice", [newId, savedDraft.version, testDraft]);
+const alsum = { id: newId };
+check("an issued invoice billed to ALSUM exists to test against", Boolean(newId));
+if (!newId) process.exit(1);
 
 const before = pdfText(Buffer.from(await (await fetch(`${B}/invoices/${alsum.id}/pdf`, { headers: { cookie } })).arrayBuffer()));
 check("its PDF bills ALSUM INFOTECH PRIVATE LIMITED", before.includes("ALSUM INFOTECH PRIVATE LIMITED"));
+check("the bill-to was frozen onto it", before.includes("Chennai"));
 
 // Rename the customer through the real form, exactly as a person would.
 const customersPage = await (await fetch(`${B}/customers`, { headers: { cookie } })).text();

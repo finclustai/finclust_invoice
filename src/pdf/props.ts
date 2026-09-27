@@ -19,6 +19,7 @@ export interface CompanyForPdf {
 }
 
 export interface InvoiceDocumentProps {
+  template: string;
   /** The GST number once issued; "Draft" before that. */
   number: string;
   isDraft: boolean;
@@ -64,6 +65,7 @@ export function buildDocumentProps(
 
   const isDraft = state === "DRAFT";
   return {
+    template: draft.template,
     number: isDraft ? "Draft" : number,
     isDraft,
     seller: company,

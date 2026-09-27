@@ -80,13 +80,17 @@ export async function shareInvoice(invoiceId: string): Promise<ShareResult> {
       `Hello ${invoice.draft.customer.name}, here is invoice ${invoice.number} ` +
       `from ${invoice.company.name} for ${total}.\n${url}`;
 
-    // Only digits reach wa.me; a saved phone may carry spaces or a plus.
-    const digits = (invoice.draft.customer.emails.length ? "" : "").concat(
-      (await db.customer.findUnique({
-        where: { id: invoice.draft.customerId ?? "" },
-        select: { phone: true },
-      }))?.phone ?? "",
-    ).replace(/\D/g, "");
+    // Only when the customer was picked from the list: a customer typed
+    // straight onto the invoice has no row to look a number up in, and passing
+    // an empty string as a uuid made sharing fail outright.
+    const saved = invoice.draft.customerId
+      ? await db.customer.findUnique({
+          where: { id: invoice.draft.customerId },
+          select: { phone: true },
+        })
+      : null;
+    // wa.me accepts digits only; a saved number may carry spaces or a plus.
+    const digits = (saved?.phone ?? "").replace(/\D/g, "");
 
     return {
       ok: true,

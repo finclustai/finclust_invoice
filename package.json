@@ -21,7 +21,8 @@
     "check:send": "node scripts/check-send.mjs",
     "check:payments": "node scripts/check-payments.mjs",
     "check:share": "node scripts/check-share.mjs",
-    "check:dashboard": "node scripts/check-dashboard.mjs"
+    "check:dashboard": "node scripts/check-dashboard.mjs",
+    "db:clear": "node --env-file=.env --import tsx scripts/clear-invoices.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

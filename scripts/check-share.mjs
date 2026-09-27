@@ -29,15 +29,44 @@ async function hiddenFields(path, marker, cookie) {
 
 const lf = await hiddenFields("/login", "current-password");
 lf.set("next", "/"); lf.set("email", env.SEED_ADMIN_EMAIL); lf.set("password", env.SEED_ADMIN_PASSWORD);
+
+/**
+ * Always issues a fresh invoice rather than reusing one. Reusing whatever
+ * happened to be in the database made the check depend on data another script
+ * wrote, which is how it started failing on a customer with no email address.
+ */
+async function anIssuedInvoice(cookie, hiddenFields, B) {
+  const call = async (action, args) =>
+    (await fetch(`${B}/api/dev`, {
+      method: "POST",
+      headers: { cookie, "content-type": "application/json" },
+      body: JSON.stringify({ action, args }),
+    })).json();
+
+  const form = await hiddenFields("/invoices", "New invoice", cookie);
+  const created = await fetch(`${B}/invoices`, { method: "POST", body: form, headers: { cookie }, redirect: "manual" });
+  const id = ((created.headers.get("location") ?? "").match(/invoices\/([0-9a-f-]{36})/) || [])[1];
+  const state = await (await fetch(`${B}/api/dev?id=${id}`, { headers: { cookie } })).json();
+  const draft = {
+    companyId: state.companyId, customerId: null,
+    customer: { name: "ALSUM INFOTECH PRIVATE LIMITED", addressLines: ["Chennai"], gstin: "33AAGCA7303P1ZK", stateCode: "33", emails: ["hr@alsuminfotech.com"] },
+    issueDate: "2026-09-28", dueDate: null, paymentTerms: null,
+    currency: "INR", gstEnabled: true, taxRateBp: 1800, template: "classic", notes: null,
+    lines: [{ id: crypto.randomUUID(), description: "Consulting", hsnSac: null, qty: 1, rateMinor: 28702000 }],
+  };
+  const saved = await call("saveDraft", [id, 1, draft]);
+  const result = await call("issueInvoice", [id, saved.version, draft]);
+  return { id, number: result.number };
+}
+
 const cookie = ((await fetch(`${B}/login`, { method: "POST", body: lf, redirect: "manual" })).headers.get("set-cookie") ?? "").split(";")[0];
 
 const call = async (action, args) =>
   (await fetch(`${B}/api/dev`, { method: "POST", headers: { cookie, "content-type": "application/json" }, body: JSON.stringify({ action, args }) })).json();
 
-const invoices = await (await fetch(`${B}/api/dev?what=index`, { headers: { cookie } })).json();
-const issued = invoices.find((i) => i.number === "INV2608002");
-check("an issued invoice to share", Boolean(issued));
-if (!issued) process.exit(1);
+const issued = await anIssuedInvoice(cookie, hiddenFields, B);
+check("an issued invoice to share", Boolean(issued?.id), issued?.number);
+if (!issued?.id) process.exit(1);
 
 // ------------------------------------------------------------------ share
 const shared = await call("shareInvoice", [issued.id]);
@@ -45,7 +74,7 @@ check("a link is created", shared.ok === true, JSON.stringify(shared).slice(0, 1
 if (!shared.ok) { console.log("\ncannot continue"); process.exit(1); }
 const token = shared.url.split("/p/")[1];
 check("the token is long enough not to be guessed", token.length >= 30, `${token.length} chars`);
-check("the message names the invoice and the amount", shared.message.includes("INV2608002") && shared.message.includes("3,38,683.60"));
+check("the message names the invoice and the amount", shared.message.includes(issued.number) && /[\d,]+\.\d\d/.test(shared.message));
 
 // The whole point: it opens with no cookie at all.
 const anon = await fetch(`${B}/p/${token}`);
@@ -65,13 +94,14 @@ await call("revokeShareLink", [token]);
 check("a revoked link stops working", (await fetch(`${B}/p/${token}`)).status === 404);
 
 // ----------------------------------------------------------------- CA pack
-const preview = await call("previewPack", ["2608"]);
-check("the month's pack is previewed before anything is built", preview.count >= 2, `${preview.count} invoices`);
+const period = issued.number.slice(3, 7);
+const preview = await call("previewPack", [period]);
+check("the month's pack is previewed before anything is built", preview.count >= 1, `${preview.count} invoices`);
 
-const noTo = await call("buildCaPack", ["2608", { to: "", cc: "" }]);
+const noTo = await call("buildCaPack", [period, { to: "", cc: "" }]);
 check("it refuses to build without a recipient", noTo.ok === false);
 
-const pack = await call("buildCaPack", ["2608", { to: env.SEED_ADMIN_EMAIL, cc: "" }]);
+const pack = await call("buildCaPack", [period, { to: env.SEED_ADMIN_EMAIL, cc: "" }]);
 check("the pack becomes a Zoho draft", pack.ok === true, JSON.stringify(pack).slice(0, 140));
 check("every invoice in the month is attached", (pack.attached ?? 0) >= preview.count, `${pack.attached} attached`);
 

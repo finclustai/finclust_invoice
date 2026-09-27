@@ -345,3 +345,56 @@ export async function duplicateInvoice(id: string, options?: { bumpMonths?: bool
 
   redirect(`/invoices/${newId}`);
 }
+
+/**
+ * Removes an invoice for good.
+ *
+ * Only a draft can go: a draft never took a number, so nothing is left behind.
+ * An issued invoice keeps its number in the GST series whatever happens to it,
+ * so it is cancelled instead — a deleted one would leave a gap, and a gap is
+ * the first thing an assessing officer asks about.
+ */
+export async function deleteInvoice(id: string): Promise<{ ok: true } | { ok: false; problems: string[] }> {
+  const user = await requireUser("write");
+  const invoice = await db.invoice.findUnique({
+    where: { id },
+    select: { state: true, number: true },
+  });
+  if (!invoice) return { ok: false, problems: ["That invoice no longer exists"] };
+  if (invoice.state !== "DRAFT") {
+    return {
+      ok: false,
+      problems: ["An issued invoice can't be deleted — cancel it instead, so its number stays in the series."],
+    };
+  }
+
+  await db.$transaction(async (tx) => {
+    await tx.invoice.delete({ where: { id } });
+    await tx.activityLog.create({
+      data: { actorId: user.id, entity: "invoice", entityId: id, action: "deleted" },
+    });
+  });
+
+  revalidatePath("/invoices");
+  return { ok: true };
+}
+
+/** Voids an issued invoice while keeping its number in the series. */
+export async function cancelInvoice(id: string): Promise<{ ok: true } | { ok: false; problems: string[] }> {
+  const user = await requireUser("write");
+  const invoice = await db.invoice.findUnique({ where: { id }, select: { state: true, number: true } });
+  if (!invoice) return { ok: false, problems: ["That invoice no longer exists"] };
+  if (invoice.state === "CANCELLED") return { ok: false, problems: ["That invoice is already cancelled"] };
+  if (invoice.state === "DRAFT") return { ok: false, problems: ["A draft has no number yet — delete it instead"] };
+
+  await db.$transaction(async (tx) => {
+    await tx.invoice.update({ where: { id }, data: { state: "CANCELLED" } });
+    await tx.activityLog.create({
+      data: { actorId: user.id, entity: "invoice", entityId: id, action: "cancelled", meta: { number: invoice.number } },
+    });
+  });
+
+  revalidatePath(`/invoices/${id}`);
+  revalidatePath("/invoices");
+  return { ok: true };
+}

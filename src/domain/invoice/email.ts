@@ -1,5 +1,13 @@
 /** Who the message is written for. The same invoice goes to both. */
-export type Audience = "client" | "accountant";
+/**
+ * Who the message is written for.
+ *
+ * "accountant" is one invoice sent to the person who files it; "pack" is a
+ * whole month's worth. They were one template once, which meant the single
+ * invoice inherited wording built around {month} and {count} — the subject
+ * ended mid-sentence and the only line about the invoice was dropped.
+ */
+export type Audience = "client" | "accountant" | "pack";
 
 export interface EmailTemplate {
   subject: string;
@@ -48,6 +56,15 @@ export const DEFAULT_TEMPLATES: Record<Audience, EmailTemplate> = {
     ].join("\n\n"),
   },
   accountant: {
+    subject: "Invoice {invoice_number} — {company}",
+    body: [
+      "Hello,",
+      "Attached is invoice {invoice_number} dated {invoice_date}, billed to {customer} for {total}, for your records.",
+      "Please let us know if anything is missing.",
+      "Thanks and regards,\n{company}",
+    ].join("\n\n"),
+  },
+  pack: {
     subject: "{company} — invoices for {month}",
     body: [
       "Hello,",
@@ -56,6 +73,13 @@ export const DEFAULT_TEMPLATES: Record<Audience, EmailTemplate> = {
       "Thanks and regards,\n{company}",
     ].join("\n\n"),
   },
+};
+
+/** What each template is for, shown above its tab in Settings. */
+export const AUDIENCE_LABEL: Record<Audience, { tab: string; help: string }> = {
+  client: { tab: "To the customer", help: "One invoice, sent to the person who has to pay it." },
+  accountant: { tab: "To the accountant", help: "One invoice, sent to the person who files it." },
+  pack: { tab: "A whole month", help: "Every invoice for a month, with the summary spreadsheet." },
 };
 
 /**

@@ -13,6 +13,9 @@ import type { CurrencySummary } from "./queries";
  * readable without relying on the colour at all.
  */
 const DATA = "#b35c00";
+/* Orange and blue, validated together: CVD separation 26.8, normal-vision
+   29.8, both above 3:1 on this paper. */
+const SERIES = ["#b35c00", "#2a78d6", "#1baf7a", "#7a3d9e", "#b3005c"];
 
 export function Dashboard({ currencies, today }: { currencies: CurrencySummary[]; today: string }) {
   if (currencies.length === 0) {
@@ -40,6 +43,8 @@ export function Dashboard({ currencies, today }: { currencies: CurrencySummary[]
           Figures are kept separate per currency — adding rupees to dollars would mean nothing.
         </p>
       </header>
+
+      {currencies.length > 1 && <SideBySide currencies={currencies} />}
 
       <div className="space-y-8">
         {currencies.map((c) => (
@@ -210,5 +215,85 @@ function Bars({
         ))}
       </tbody>
     </table>
+  );
+}
+
+
+/**
+ * Each currency's twelve months, side by side and in its own colour.
+ *
+ * The bars are scaled within each currency, never against each other: a lakh
+ * of rupees and a thousand dollars are not comparable lengths, and drawing
+ * them on one scale would make the smaller currency invisible while implying
+ * the comparison is meaningful. The amounts are printed, so the figures are
+ * exact even though the bars are not comparable across colours.
+ */
+function SideBySide({ currencies }: { currencies: CurrencySummary[] }) {
+  const months = currencies[0]?.monthly.map((m) => m.period) ?? [];
+  const active = months.filter((period) =>
+    currencies.some((c) => (c.monthly.find((m) => m.period === period)?.billedMinor ?? 0) > 0),
+  );
+  if (active.length === 0) return null;
+
+  const max = new Map(
+    currencies.map((c) => [c.currency, Math.max(...c.monthly.map((m) => m.billedMinor), 1)]),
+  );
+
+  return (
+    <div className="card mb-8 p-4">
+      <h3 className="font-semibold">Billed each month</h3>
+      <p className="text-xs text-mid">
+        Each currency is scaled to its own biggest month — the lengths compare months, not
+        currencies.
+      </p>
+
+      <div className="mt-3 mb-3 flex flex-wrap gap-3">
+        {currencies.map((c, i) => (
+          <span key={c.currency} className="flex items-center gap-1.5 text-xs">
+            <span
+              className="h-2.5 w-2.5 rounded-[2px]"
+              style={{ backgroundColor: SERIES[i % SERIES.length] }}
+              aria-hidden
+            />
+            {c.currency}
+          </span>
+        ))}
+      </div>
+
+      <table className="w-full text-sm">
+        <caption className="sr-only">Billed each month, one row per month and currency</caption>
+        <tbody>
+          {active.map((period) => (
+            <tr key={period}>
+              <th scope="row" className="w-24 py-1.5 pr-2 text-left align-top font-normal text-body">
+                {periodLabel(period).replace(/ (\d{2})\d{2}$/, " ’$1")}
+              </th>
+              <td className="py-1.5">
+                {currencies.map((c, i) => {
+                  const value = c.monthly.find((m) => m.period === period)?.billedMinor ?? 0;
+                  if (value === 0) return null;
+                  return (
+                    <span key={c.currency} className="mb-0.5 flex items-center gap-2 last:mb-0">
+                      <span
+                        className="h-3 rounded-r-[3px]"
+                        style={{
+                          width: `max(2px, ${(value / (max.get(c.currency) ?? 1)) * 100}%)`,
+                          backgroundColor: SERIES[i % SERIES.length],
+                        }}
+                        aria-hidden
+                      />
+                      <span className="tnum shrink-0 text-xs text-body">
+                        {formatAmount(value, c.currency)}
+                        <span className="text-mid"> {c.currency}</span>
+                      </span>
+                    </span>
+                  );
+                })}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

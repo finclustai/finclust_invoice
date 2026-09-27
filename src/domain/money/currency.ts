@@ -1,4 +1,4 @@
-export type CurrencyCode = "INR" | "USD";
+export type CurrencyCode = "INR" | "USD" | "EUR" | "AED" | "SGD";
 
 interface CurrencyInfo {
   code: CurrencyCode;
@@ -10,6 +10,9 @@ interface CurrencyInfo {
 export const CURRENCIES: Record<CurrencyCode, CurrencyInfo> = {
   INR: { code: "INR", locale: "en-IN", words: { system: "indian", major: "Rupees", minor: "Paise" } },
   USD: { code: "USD", locale: "en-US", words: { system: "international", major: "US Dollars", minor: "Cents" } },
+  EUR: { code: "EUR", locale: "en-IE", words: { system: "international", major: "Euro", minor: "Cents" } },
+  AED: { code: "AED", locale: "en-AE", words: { system: "international", major: "UAE Dirhams", minor: "Fils" } },
+  SGD: { code: "SGD", locale: "en-SG", words: { system: "international", major: "Singapore Dollars", minor: "Cents" } },
 };
 
 export const CURRENCY_CODES = Object.keys(CURRENCIES) as [CurrencyCode, ...CurrencyCode[]];

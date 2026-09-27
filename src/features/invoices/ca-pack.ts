@@ -139,7 +139,7 @@ export async function buildCaPack(
 
     const company = rows[0]!.company;
     const templates = await loadTemplates();
-    const { subject, html } = fillTemplate(templates.accountant, {
+    const { subject, html } = fillTemplate(templates.pack, {
       invoice_number: "",
       customer: "",
       company: company.name,
