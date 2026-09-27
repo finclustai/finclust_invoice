@@ -9,6 +9,7 @@ import { businessDay } from "@/domain/invoice/today";
 import { requireUser } from "@/features/auth/current-user";
 import { db } from "@/infra/db";
 import { allocateInvoiceNumber } from "./allocate-number";
+import { bumpMonth } from "./bump-month";
 import { draftToRow } from "./mapping";
 import { loadVersionWithDiff } from "./versions";
 import { writeDraft, type SaveResult } from "./write-draft";
@@ -250,4 +251,97 @@ export async function restoreVersion(
 export async function changesForVersion(invoiceId: string, versionId: string) {
   await requireUser("read");
   return (await loadVersionWithDiff(invoiceId, versionId))?.changes ?? [];
+}
+
+/**
+ * Starts a new draft from an existing invoice.
+ *
+ * Copies content only — company, customer, currency, GST settings, template,
+ * notes and lines, each line with a fresh id. It deliberately copies no
+ * number, no state, no payments and no history: those belong to the invoice
+ * that was actually sent, and carrying them would make the copy look like it.
+ *
+ * The customer comes from the invoice's own snapshot, not from the customer
+ * row, so repeating last month's invoice reproduces last month's invoice even
+ * if that customer has since been renamed or archived.
+ */
+export async function duplicateInvoice(id: string, options?: { bumpMonths?: boolean }): Promise<never> {
+  const user = await requireUser("write");
+
+  const source = await db.invoice.findUnique({
+    where: { id },
+    select: {
+      companyId: true,
+      customerId: true,
+      customerSnapshot: true,
+      currency: true,
+      template: true,
+      gstEnabled: true,
+      taxRateBp: true,
+      notes: true,
+      company: { select: { stateCode: true } },
+      lines: {
+        orderBy: { position: "asc" },
+        select: { description: true, hsnSac: true, qtyMilli: true, rateMinor: true },
+      },
+    },
+  });
+  if (!source) throw new Error("That invoice no longer exists");
+
+  const issueDate = businessDay();
+  const draft: InvoiceDraft = {
+    companyId: source.companyId,
+    customerId: source.customerId,
+    customer: source.customerSnapshot as InvoiceDraft["customer"],
+    issueDate,
+    dueDate: null,
+    paymentTerms: null,
+    currency: source.currency as InvoiceDraft["currency"],
+    gstEnabled: source.gstEnabled,
+    taxRateBp: source.taxRateBp,
+    template: source.template,
+    notes: source.notes,
+    lines: source.lines.map((l) => ({
+      id: randomUUID(),
+      description: options?.bumpMonths ? bumpMonth(l.description) : l.description,
+      hsnSac: l.hsnSac,
+      qty: l.qtyMilli / 1000,
+      rateMinor: Number(l.rateMinor),
+    })),
+  };
+
+  const calc = calculateInvoice(draft.lines, {
+    currency: draft.currency,
+    gstEnabled: draft.gstEnabled,
+    taxRateBp: draft.taxRateBp,
+    sellerStateCode: source.company.stateCode,
+    placeOfSupplyStateCode: draft.customer.stateCode,
+  });
+  const { lines, ...row } = draftToRow(draft, calc);
+
+  const newId = await db.$transaction(async (tx) => {
+    const created = await tx.invoice.create({
+      data: {
+        ...row,
+        number: draftNumber(),
+        companyId: source.companyId,
+        state: "DRAFT",
+        createdById: user.id,
+        lines: { create: lines },
+      },
+      select: { id: true },
+    });
+    await tx.activityLog.create({
+      data: {
+        actorId: user.id,
+        entity: "invoice",
+        entityId: created.id,
+        action: "created",
+        meta: { duplicatedFrom: id },
+      },
+    });
+    return created.id;
+  });
+
+  redirect(`/invoices/${newId}`);
 }

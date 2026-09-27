@@ -1,5 +1,6 @@
 import { requireUser } from "@/features/auth/current-user";
 import { AuthError } from "@/features/auth/permissions";
+import { saveCustomer } from "@/features/customers/actions";
 import { issueInvoice, restoreVersion, saveDraft } from "@/features/invoices/actions";
 import { listTimeline } from "@/features/invoices/versions";
 import { db } from "@/infra/db";
@@ -21,6 +22,14 @@ import { db } from "@/infra/db";
 const DISABLED = process.env.NODE_ENV === "production" || process.env.ENABLE_DEV_TEST_HOOKS !== "1";
 
 const ACTIONS = { saveDraft, issueInvoice, restoreVersion } as const;
+
+/** saveCustomer takes FormData, so the scripts send plain fields. */
+async function saveCustomerFields(id: string | null, fields: Record<string, string>) {
+  const form = new FormData();
+  if (id) form.set("id", id);
+  for (const [k, v] of Object.entries(fields)) form.set(k, v);
+  return saveCustomer({}, form);
+}
 
 export async function GET(req: Request) {
   if (DISABLED) return new Response("Not found", { status: 404 });
@@ -59,6 +68,14 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   if (DISABLED) return new Response("Not found", { status: 404 });
   const { action, args } = (await req.json()) as { action: keyof typeof ACTIONS; args: unknown[] };
+  if (action === ("saveCustomer" as never)) {
+    try {
+      return Response.json(await saveCustomerFields(args[0] as string | null, args[1] as Record<string, string>));
+    } catch (error) {
+      if (error instanceof AuthError) return Response.json({ error: error.reason }, { status: 403 });
+      throw error;
+    }
+  }
   const fn = ACTIONS[action];
   if (!fn) return new Response("unknown action", { status: 400 });
   try {

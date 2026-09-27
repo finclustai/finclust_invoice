@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CURRENCY_CODES } from "../money/currency";
+import { isValidStateCode } from "./state-codes";
 import { lineAmount } from "./calculate";
 
 export const GSTIN_PATTERN = /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
@@ -16,10 +17,11 @@ export const customerSnapshotSchema = z
     name: z.string().max(200),
     addressLines: z.array(z.string().max(200)).max(6),
     gstin: z.string().regex(GSTIN_PATTERN, "Invalid GSTIN").nullable(),
-    /** GST state code of place of supply; null = outside India. */
+    /** GST state code of place of supply; null = outside India. Checked
+     *  against the real table, so "00" cannot reach the tax calculation. */
     stateCode: z
       .string()
-      .regex(/^\d{2}$/)
+      .refine(isValidStateCode, "Not a GST state code")
       .nullable(),
     emails: z.array(z.string().email()).max(10),
   })

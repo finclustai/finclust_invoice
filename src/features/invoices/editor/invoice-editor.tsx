@@ -12,6 +12,7 @@ import { CURRENCY_CODES, type CurrencyCode } from "@/domain/money/currency";
 import { buildDocumentProps, type CompanyForPdf } from "@/pdf/props";
 import { changesForVersion, issueInvoice, saveDraft } from "../actions";
 import type { TimelineEntry } from "../versions";
+import { DuplicateButton } from "./duplicate-button";
 import { HistoryDrawer } from "./history-drawer";
 import { CustomerPicker, snapshotOf, type PickableCustomer } from "./customer-picker";
 import { LineGrid } from "./line-grid";
@@ -103,6 +104,7 @@ export function InvoiceEditor({
         <SaveIndicator state={save} />
 
         <div className="ml-auto flex items-center gap-2">
+          {canEdit && <DuplicateButton descriptions={draft.lines.map((l) => l.description)} />}
           <button className="btn field-sm" onClick={() => setShowHistory(true)}>
             <History size={15} aria-hidden />
             History

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Search, UserRound } from "lucide-react";
+import { Plus, Search, UserRound } from "lucide-react";
 import type { CustomerSnapshot } from "@/domain/invoice/schema";
 import type { CurrencyCode } from "@/domain/money/currency";
 
@@ -127,9 +127,15 @@ function PickerDialog({
         <p className="text-xs text-mid">
           Copied onto this invoice. Editing the customer later won’t change it.
         </p>
-        <button type="button" className="btn field-sm" onClick={() => dialog.current?.close()}>
-          Cancel
-        </button>
+        <div className="flex shrink-0 gap-2">
+          <a className="btn field-sm" href="/customers/new">
+            <Plus size={14} aria-hidden />
+            New
+          </a>
+          <button type="button" className="btn field-sm" onClick={() => dialog.current?.close()}>
+            Cancel
+          </button>
+        </div>
       </div>
     </dialog>
   );
