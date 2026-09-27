@@ -89,7 +89,7 @@ const EXPECTED = {
 };
 
 const cookie = await login();
-const invoices = await (await fetch(`${BASE}/api/invoice-index`, { headers: { cookie } })).json();
+const invoices = await (await fetch(`${BASE}/api/dev?what=index`, { headers: { cookie } })).json();
 mkdirSync("tmp", { recursive: true });
 
 for (const { id, number } of invoices) {

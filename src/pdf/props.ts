@@ -19,6 +19,7 @@ export interface CompanyForPdf {
 }
 
 export interface InvoiceDocumentProps {
+  /** The GST number once issued; "Draft" before that. */
   number: string;
   isDraft: boolean;
   seller: CompanyForPdf;
@@ -61,9 +62,10 @@ export function buildDocumentProps(
     placeOfSupplyStateCode: draft.customer.stateCode,
   });
 
+  const isDraft = state === "DRAFT";
   return {
-    number,
-    isDraft: state === "DRAFT",
+    number: isDraft ? "Draft" : number,
+    isDraft,
     seller: company,
     customer: draft.customer,
     issueDateLabel: formatLongDate(draft.issueDate),

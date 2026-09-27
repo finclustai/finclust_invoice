@@ -43,6 +43,7 @@ export function InvoiceEditor({
   const [draft, setDraft] = useState(initialDraft);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
   const [issuing, setIssuing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [problems, setProblems] = useState<string[]>([]);
 
   // Every total on the screen and in the PDF comes from here. Nothing is typed.
@@ -69,10 +70,22 @@ export function InvoiceEditor({
   async function onIssue() {
     setIssuing(true);
     setProblems([]);
-    const result = await issueInvoice(id, version, draft);
+    // Land any pending edit first: issuing with the version the page was
+    // rendered with would be refused the moment autosave has run once.
+    await save.flushNow();
+    const result = await issueInvoice(id, save.version, draft);
     setIssuing(false);
     if (result.ok) window.location.reload();
     else setProblems(result.problems);
+  }
+
+  /** The PDF route renders the stored row, so an unsaved edit would download
+   *  something different from the preview on screen. */
+  async function onDownload() {
+    setDownloading(true);
+    await save.flushNow();
+    setDownloading(false);
+    window.location.href = `/invoices/${id}/pdf`;
   }
 
   return (
@@ -81,14 +94,14 @@ export function InvoiceEditor({
         <Link href="/invoices" className="btn field-sm" aria-label="Back to invoices">
           <ArrowLeft size={15} aria-hidden />
         </Link>
-        <span className="font-mono text-sm font-bold">{number}</span>
+        <span className="font-mono text-sm font-bold">{state === "DRAFT" ? "Draft" : number}</span>
         <SaveIndicator state={save} />
 
         <div className="ml-auto flex items-center gap-2">
-          <a className="btn field-sm" href={`/invoices/${id}/pdf`}>
-            <Download size={15} aria-hidden />
+          <button className="btn field-sm" onClick={onDownload} disabled={downloading}>
+            {downloading ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Download size={15} aria-hidden />}
             Download
-          </a>
+          </button>
           {canEdit && state === "DRAFT" && (
             <button className="btn btn-primary field-sm" onClick={onIssue} disabled={issuing}>
               {issuing ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Send size={15} aria-hidden />}
@@ -102,7 +115,14 @@ export function InvoiceEditor({
         <p role="alert" className="error-line m-3">
           <AlertCircle size={15} aria-hidden />
           {save.message}
-          <button className="btn field-sm ml-auto" onClick={() => window.location.reload()}>
+          <button
+            className="btn field-sm ml-auto"
+            onClick={() => {
+              if (confirm("Reload and lose anything you have typed since the last save?")) {
+                window.location.reload();
+              }
+            }}
+          >
             Reload
           </button>
         </p>

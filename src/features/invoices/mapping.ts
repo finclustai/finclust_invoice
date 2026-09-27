@@ -3,6 +3,7 @@ import type { CustomerSnapshot, InvoiceDraft, InvoiceLine } from "@/domain/invoi
 import type { InvoiceState } from "@/domain/invoice/status";
 import type { CurrencyCode } from "@/domain/money/currency";
 import { fromMinor, fromQtyMilli, toMinor, toQtyMilli } from "@/domain/money/bigint";
+import { periodOf } from "@/domain/invoice/numbering";
 
 /** The shape Prisma returns for an invoice with its lines. */
 export interface InvoiceRow {
@@ -33,6 +34,8 @@ export interface InvoiceRow {
 }
 
 export interface InvoiceRowWrite {
+  /** Always re-derived from issueDate, so moving the date moves the month. */
+  period: string;
   customerId: string | null;
   customerSnapshot: CustomerSnapshot;
   issueDate: Date;
@@ -110,6 +113,7 @@ export function draftToRow(
   calc: CalculatedInvoice<InvoiceLine>,
 ): InvoiceRowWrite {
   return {
+    period: periodOf(draft.issueDate),
     customerId: draft.customerId,
     customerSnapshot: draft.customer,
     issueDate: new Date(`${draft.issueDate}T00:00:00.000Z`),

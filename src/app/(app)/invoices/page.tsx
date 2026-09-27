@@ -85,7 +85,7 @@ export default async function InvoicesPage({
                 <li key={inv.id}>
                   <Link href={`/invoices/${inv.id}`} className="card block p-4">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-sm font-bold">{inv.number}</span>
+                      <span className="font-mono text-sm font-bold">{inv.status === "draft" ? "Draft" : inv.number}</span>
                       <span className={`chip ${status.className}`}>{status.label}</span>
                     </div>
                     <p className="mt-1 truncate text-sm text-body">{inv.customerName}</p>
@@ -119,7 +119,7 @@ export default async function InvoicesPage({
                     <tr key={inv.id} className="border-b border-line last:border-0 hover:bg-sand">
                       <td className="px-4 py-2.5">
                         <Link href={`/invoices/${inv.id}`} className="font-mono font-bold underline-offset-2 hover:underline">
-                          {inv.number}
+                          {inv.status === "draft" ? "Draft" : inv.number}
                         </Link>
                       </td>
                       <td className="tnum px-4 py-2.5 text-mid">{inv.issueDate}</td>

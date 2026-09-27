@@ -140,6 +140,13 @@
   .field::placeholder {
     color: var(--placeholder);
   }
+  /* A read-only viewer (the CA) must be able to see at a glance that nothing
+     here is editable, not just read a banner at the top of the page. */
+  .field:disabled {
+    background: var(--sand);
+    color: var(--mid);
+    cursor: not-allowed;
+  }
   .field:focus {
     outline: none;
     border-color: var(--ink);

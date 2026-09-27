@@ -11,22 +11,31 @@ import { allocateInvoiceNumber } from "./allocate-number";
 import { draftToRow } from "./mapping";
 import { writeDraft, type SaveResult } from "./write-draft";
 
-/** Today in IST, as YYYY-MM-DD. The invoice date decides the number's period,
- *  so using the server's UTC day would put a 1 Sep IST invoice in August. */
+export type { SaveResult } from "./write-draft";
+
+/** Today in IST. The invoice date decides the number's period, so the server's
+ *  UTC day would file a 1 Sep IST invoice under August. */
 function todayInIndia(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
 }
 
+/** A draft has no GST number yet, but the column is unique and not null. */
+const draftNumber = () => `DRAFT-${randomUUID().slice(0, 8)}`;
+
 /**
- * Creates an empty draft and sends the user straight into the editor. The
- * number is allocated in the same transaction as the insert, so a failure
- * rolls the counter back and the series keeps no gaps.
+ * Creates an empty draft and opens it.
+ *
+ * Deliberately allocates NO invoice number. A number taken here is burnt by
+ * every abandoned draft, and would still say August on an invoice whose date
+ * was later moved to September — a GST invoice filed under the wrong return.
+ * The number is taken when the invoice is issued, from the date it has then.
  */
 export async function createDraftInvoice(): Promise<never> {
   const user = await requireUser("write");
   const company = await db.company.findFirst({
     where: { isArchived: false },
-    select: { id: true, defaultTemplate: true },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, defaultTemplate: true, stateCode: true },
   });
   if (!company) throw new Error("No seller company is set up yet");
 
@@ -46,40 +55,29 @@ export async function createDraftInvoice(): Promise<never> {
     lines: [{ id: randomUUID(), description: "", hsnSac: null, qty: 1, rateMinor: 0 }],
   };
 
+  const calc = calculateInvoice(draft.lines, {
+    currency: draft.currency,
+    gstEnabled: draft.gstEnabled,
+    taxRateBp: draft.taxRateBp,
+    sellerStateCode: company.stateCode,
+    placeOfSupplyStateCode: draft.customer.stateCode,
+  });
+  const { lines, ...row } = draftToRow(draft, calc);
+
   const id = await db.$transaction(async (tx) => {
-    const { period, number } = await allocateInvoiceNumber(tx, issueDate);
-    const calc = calculateInvoice(draft.lines, {
-      currency: draft.currency,
-      gstEnabled: draft.gstEnabled,
-      taxRateBp: draft.taxRateBp,
-      sellerStateCode: "00",
-      placeOfSupplyStateCode: null,
-    });
-    const { lines, ...row } = draftToRow(draft, calc);
     const created = await tx.invoice.create({
       data: {
         ...row,
-        number,
-        period,
+        number: draftNumber(),
         companyId: company.id,
         state: "DRAFT",
         createdById: user.id,
         lines: { create: lines },
-        versions: {
-          create: {
-            version: 1,
-            snapshot: { ...draft, number, companyName: "" },
-            reason: "Created",
-            userId: user.id,
-          },
-        },
       },
       select: { id: true },
     });
-    // In the same transaction as the write, so an invoice can never exist
-    // without its log entry, nor be logged without existing.
     await tx.activityLog.create({
-      data: { actorId: user.id, entity: "invoice", entityId: created.id, action: "created", meta: { number } },
+      data: { actorId: user.id, entity: "invoice", entityId: created.id, action: "created" },
     });
     return created.id;
   });
@@ -87,9 +85,7 @@ export async function createDraftInvoice(): Promise<never> {
   redirect(`/invoices/${id}`);
 }
 
-export type { SaveResult } from "./write-draft";
-
-/** The server-action face of writeDraft: authorise, look up the seller, write. */
+/** The server-action face of writeDraft: authorise, find the seller, write. */
 export async function saveDraft(
   id: string,
   expectedVersion: number,
@@ -110,23 +106,44 @@ export async function saveDraft(
       sellerStateCode: invoice.company.stateCode,
       actorId: user.id,
     });
-  } catch {
-    return {
-      ok: false,
-      reason: "invalid",
-      problems: ["Could not save. Check your connection and try again."],
-    };
+  } catch (error) {
+    // Logged rather than swallowed: a bad line id or a dangling customer would
+    // otherwise reach the user as "check your connection".
+    console.error("[saveDraft]", error);
+    return { ok: false, reason: "invalid", problems: ["Could not save. Please try again."] };
   }
 }
 
-export type IssueResult = { ok: true } | { ok: false; problems: string[] };
+export type IssueResult = { ok: true; number: string } | { ok: false; problems: string[] };
 
-/** Moves a draft to issued, once it is complete enough to send. */
-export async function issueInvoice(id: string, expectedVersion: number, draft: InvoiceDraft): Promise<IssueResult> {
+class AlreadyIssued extends Error {}
+
+/**
+ * Turns a draft into a real invoice: saves it, then takes the next number in
+ * the series for the month its date falls in.
+ *
+ * The number is allocated inside the same transaction that flips the state,
+ * behind a `state: "DRAFT"` guard. If two clicks race, one wins and the
+ * loser's transaction rolls back — including its counter increment — so the
+ * series gains no gap and nothing is issued twice.
+ */
+export async function issueInvoice(
+  id: string,
+  expectedVersion: number,
+  draft: InvoiceDraft,
+): Promise<IssueResult> {
   const user = await requireUser("write");
 
   const problems = validateForIssue(draft);
   if (problems.length) return { ok: false, problems };
+
+  const current = await db.invoice.findUnique({
+    where: { id },
+    select: { state: true, company: { select: { name: true } } },
+  });
+  if (!current) return { ok: false, problems: ["That invoice no longer exists"] };
+  // Checked before saving, so a rejected call leaves no side effects behind.
+  if (current.state !== "DRAFT") return { ok: false, problems: ["This invoice has already been issued"] };
 
   const saved = await saveDraft(id, expectedVersion, draft);
   if (!saved.ok) {
@@ -134,38 +151,50 @@ export async function issueInvoice(id: string, expectedVersion: number, draft: I
       ok: false,
       problems: [
         saved.reason === "conflict"
-          ? "This invoice was changed somewhere else. Reload before issuing."
+          ? "Someone else changed this invoice. Reload before issuing."
           : (saved.problems?.[0] ?? "Could not save the invoice"),
       ],
     };
   }
 
-  const invoice = await db.invoice.findUniqueOrThrow({
-    where: { id },
-    select: { number: true, state: true, company: { select: { name: true } } },
-  });
-  if (invoice.state !== "DRAFT") return { ok: false, problems: ["This invoice has already been issued"] };
+  try {
+    const number = await db.$transaction(async (tx) => {
+      const allocated = await allocateInvoiceNumber(tx, draft.issueDate);
+      const claimed = await tx.invoice.updateMany({
+        where: { id, state: "DRAFT" },
+        data: { state: "ISSUED", number: allocated.number, period: allocated.period },
+      });
+      if (claimed.count === 0) throw new AlreadyIssued();
 
-  await db.$transaction(async (tx) => {
-    await tx.invoice.update({
-      where: { id },
-      data: {
-        state: "ISSUED",
-        versions: {
-          create: {
-            version: saved.version,
-            snapshot: { ...draft, number: invoice.number, companyName: invoice.company.name },
-            reason: "Issued",
-            userId: user.id,
-          },
+      await tx.invoiceVersion.create({
+        data: {
+          invoiceId: id,
+          version: saved.version,
+          snapshot: { ...draft, number: allocated.number, companyName: current.company.name },
+          reason: "Issued",
+          userId: user.id,
         },
-      },
+      });
+      await tx.activityLog.create({
+        data: {
+          actorId: user.id,
+          entity: "invoice",
+          entityId: id,
+          action: "issued",
+          meta: { number: allocated.number },
+        },
+      });
+      return allocated.number;
     });
-    await tx.activityLog.create({
-      data: { actorId: user.id, entity: "invoice", entityId: id, action: "issued", meta: { number: invoice.number } },
-    });
-  });
 
-  revalidatePath(`/invoices/${id}`);
-  return { ok: true };
+    revalidatePath(`/invoices/${id}`);
+    revalidatePath("/invoices");
+    return { ok: true, number };
+  } catch (error) {
+    if (error instanceof AlreadyIssued) {
+      return { ok: false, problems: ["This invoice has already been issued"] };
+    }
+    console.error("[issueInvoice]", error);
+    return { ok: false, problems: ["Could not issue the invoice. Please try again."] };
+  }
 }
