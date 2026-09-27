@@ -81,6 +81,21 @@ describe("buildSummaryCsv", () => {
     expect(csv).toContain("USD subtotal");
   });
 
+  it.each(["=cmd|calc!A1", "+1+1", "-2+3", "@SUM(A1)", "\treboot"])(
+    "defuses %j, which Excel would otherwise run as a formula",
+    (name) => {
+      // The spreadsheet is emailed to an accountant and opened in Excel. A
+      // customer name beginning = + - @ or tab is a formula there, not text.
+      const cell = parse(buildSummaryCsv([row({ customerName: name })]))[1]![2]!;
+      expect(cell.replace(/^"/, "")).toMatch(/^'/);
+    },
+  );
+
+  it("leaves an ordinary name untouched", () => {
+    const cell = parse(buildSummaryCsv([row({ customerName: "ALSUM INFOTECH PRIVATE LIMITED" })]))[1]![2]!;
+    expect(cell).toBe("ALSUM INFOTECH PRIVATE LIMITED");
+  });
+
   it("handles a month with no invoices", () => {
     expect(buildSummaryCsv([])).toContain("Invoice,Date,Customer");
   });

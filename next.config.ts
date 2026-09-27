@@ -11,9 +11,14 @@ import type { NextConfig } from "next";
  * Scripts get `'strict-dynamic'` with a nonce in a later pass; until then
  * `'self'` still blocks every third-party origin.
  */
+// Next's dev server rebuilds modules with eval; a production bundle never
+// needs it, and leaving it on would hand any injected script the easiest
+// possible route to running arbitrary code.
+const DEV_ONLY_EVAL = process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'";
+
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
+  `script-src 'self' 'unsafe-inline'${DEV_ONLY_EVAL} blob:`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   "img-src 'self' data: blob:",

@@ -37,8 +37,20 @@ const HEADER = [
 /** A spreadsheet must read amounts as numbers, so no grouping and no symbol. */
 const amount = (minor: number) => (minor / 100).toFixed(2);
 
+/**
+ * One text field, safe to open in a spreadsheet.
+ *
+ * This file is emailed to an accountant and opened in Excel, where a cell
+ * beginning = + - @ tab or carriage return is a *formula*, not text. A customer
+ * named `=cmd|'/c calc'!A1` would then be executed on their machine, so such a
+ * value is prefixed with an apostrophe, which Excel strips and treats as text.
+ *
+ * Only text fields come through here; amounts are formatted separately, so a
+ * negative figure is never mistaken for an injection attempt.
+ */
 function cell(value: string): string {
-  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  const defused = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return /[",\n\r]/.test(defused) ? `"${defused.replace(/"/g, '""')}"` : defused;
 }
 
 /**

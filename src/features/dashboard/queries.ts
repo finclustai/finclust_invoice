@@ -1,5 +1,6 @@
 import "server-only";
 import { summariseAging, type AgingRow } from "@/domain/invoice/aging";
+import { recentPeriods } from "@/domain/invoice/periods";
 import { deriveStatus } from "@/domain/invoice/status";
 import { businessDay } from "@/domain/invoice/today";
 import { fromMinor } from "@/domain/money/bigint";
@@ -16,20 +17,6 @@ export interface CurrencySummary {
   monthly: { period: string; billedMinor: number }[];
   aging: AgingRow[];
   topCustomers: { name: string; billedMinor: number }[];
-}
-
-/** "2609" going back 12 months, oldest first. */
-function recentPeriods(today: string): string[] {
-  const [year, month] = today.split("-").map(Number) as [number, number];
-  const periods: string[] = [];
-  for (let back = 11; back >= 0; back--) {
-    const m = month - back;
-    const shift = Math.floor((m - 1) / 12);
-    const yy = String((year + shift) % 100).padStart(2, "0");
-    const mm = String(((((m - 1) % 12) + 12) % 12) + 1).padStart(2, "0");
-    periods.push(`${yy}${mm}`);
-  }
-  return periods;
 }
 
 /**

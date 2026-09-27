@@ -1,3 +1,4 @@
+import "server-only";
 import { Prisma, PrismaClient } from "@prisma/client";
 
 // Ported from E:\sudheer\packages\db\src\index.ts. P1001 ("can't reach database
