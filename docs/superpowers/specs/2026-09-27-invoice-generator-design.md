@@ -131,7 +131,7 @@ prisma/schema.prisma
   - summary.csv columns: number, date, customer, GSTIN, taxable, CGST/SGST/IGST, total, currency, status.
 - **WhatsApp:** archive the PDF, create a `share_token`, and open `wa.me/<customer phone>?text=Hi…, invoice INV2609001 for ₹X: https://…/p/<token>`. The token can be revoked, and every open is logged.
 
-## Build phases (each one a vertical slice, test-first on lib/domain)
+## Build phases (each one a vertical slice, test-first on src/domain)
 1. Scaffold, Prisma schema and migration, auth and roles, companies and settings, seed with FINCLUST and the 2 sample invoices (with their numbers corrected).
 2. Domain library + tests: money, totals, GST split, numbering, amount in words, diff.
 3. Split editor: form, grid, customer combobox, Classic template, live preview, autosave, download.
@@ -144,7 +144,7 @@ prisma/schema.prisma
 Before coding: write the spec to `docs/superpowers/specs/2026-09-27-invoice-generator-design.md` (git init first), then use the writing-plans skill to produce the detailed task plan.
 
 ## Verification
-- `vitest` on lib/domain. Required cases:
+- `vitest` on src/domain. Required cases:
   - The sample INR invoice reproduces the correct total, with IGST for a Tamil Nadu customer (33) against a Karnataka seller (29).
   - The USD LUT invoice comes to $1,326.00 with no tax.
   - Numbering reset: INV2608002 → the next invoice in September is INV2609001.
