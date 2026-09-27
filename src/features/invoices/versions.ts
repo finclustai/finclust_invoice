@@ -60,12 +60,17 @@ function readSnapshot(raw: unknown): InvoiceSnapshot {
 
 /** The whole story of an invoice, newest first. */
 export async function listTimeline(invoiceId: string, limit = 50): Promise<TimelineEntry[]> {
-  const [versions, activity] = await Promise.all([
+  const [versions, activity, allUsers] = await Promise.all([
     db.invoiceVersion.findMany({
       where: { invoiceId },
       orderBy: { createdAt: "asc" },
       take: limit,
-      select: { id: true, version: true, snapshot: true, reason: true, userId: true, changeCount: true, updatedAt: true },
+      // The author comes back with the row rather than in a second query
+      // afterwards: that lookup was a whole extra round trip to the database.
+      select: {
+        id: true, version: true, snapshot: true, reason: true, userId: true,
+        changeCount: true, updatedAt: true,
+      },
     }),
     db.activityLog.findMany({
       where: { entity: "invoice", entityId: invoiceId, action: { in: ["created", "sent", "paid"] } },
@@ -73,18 +78,12 @@ export async function listTimeline(invoiceId: string, limit = 50): Promise<Timel
       take: limit,
       select: { id: true, action: true, actorId: true, at: true },
     }),
+    db.user.findMany({ select: { id: true, name: true } }),
   ]);
 
-  // One lookup rather than a join per row.
-  const ids = [...new Set([...versions.map((v) => v.userId), ...activity.map((a) => a.actorId)])].filter(
-    (id): id is string => Boolean(id),
-  );
-  const users = new Map(
-    (await db.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })).map((u) => [
-      u.id,
-      u.name,
-    ]),
-  );
+  // There are two or three people in this company, so their names are fetched
+  // once alongside the timeline rather than in a round trip of their own.
+  const users = new Map(allUsers.map((u) => [u.id, u.name]));
 
   const entries: TimelineEntry[] = [];
   versions.forEach((v, i) => {

@@ -53,16 +53,20 @@ const COMPANY_SELECT = {
   defaultTemplate: true,
 } as const;
 
-/** Everything the editor and the PDF route need, in one round trip. */
+/**
+ * Everything the editor and the PDF route need, in ONE round trip.
+ *
+ * The company used to be a second query after the invoice came back. Against a
+ * database 600ms away that is 600ms of nothing happening, on the slowest page
+ * in the app.
+ */
 export async function loadInvoice(id: string) {
-  const row = await db.invoice.findUnique({ where: { id }, select: INVOICE_SELECT });
-  if (!row) return null;
-  const company = await db.company.findUnique({
-    where: { id: row.companyId },
-    select: COMPANY_SELECT,
+  const row = await db.invoice.findUnique({
+    where: { id },
+    select: { ...INVOICE_SELECT, company: { select: COMPANY_SELECT } },
   });
-  if (!company) return null;
-  const { id: _companyId, defaultTemplate: _t, ...pdfCompany } = company;
+  if (!row?.company) return null;
+  const { id: _companyId, defaultTemplate: _t, ...pdfCompany } = row.company;
   return {
     id: row.id,
     company: pdfCompany satisfies CompanyForPdf,
