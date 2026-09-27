@@ -437,9 +437,17 @@ function Form({
           {calc.taxes.map((t) => (
             <Total key={t.label} label={`${t.label} @ ${t.rateBp / 100}%`} value={formatMoney(t.amountMinor, draft.currency)} />
           ))}
-          {calc.regime === "export" && (
-            <p className="text-xs text-mid italic">Export under LUT — no GST charged.</p>
-          )}
+          {/* A new invoice has no customer yet, so it has no place of supply,
+              so the regime computes as export. Saying "Export under LUT" at
+              that point is technically true and completely misleading. */}
+          {calc.regime === "export" &&
+            (draft.customer.name.trim() === "" ? (
+              <p className="text-xs text-mid italic">Choose a customer to work out the GST.</p>
+            ) : (
+              <p className="text-xs text-mid italic">
+                Export — no GST charged, because {draft.customer.name} is outside India.
+              </p>
+            ))}
           <div className="flex justify-between border-t border-line pt-2 text-base font-extrabold">
             <dt>Balance due</dt>
             <dd className="tnum">{formatMoney(calc.totalMinor, draft.currency)}</dd>

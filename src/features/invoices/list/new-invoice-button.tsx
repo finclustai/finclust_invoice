@@ -1,32 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { Loader2, Plus } from "lucide-react";
 import { createDraftInvoice } from "../actions";
 
 /**
- * Creating an invoice takes a moment: a row is written and a page is fetched.
- * Without saying so, the button looked broken and people clicked it twice —
- * which is two invoices. It disables itself and says what it is doing.
+ * Creating an invoice writes a row and fetches a page, which takes a moment.
+ * Without saying so the button looked broken and got clicked again — and two
+ * clicks are two invoices.
+ *
+ * The form still points straight at the server action rather than at a
+ * function that calls it: that is what keeps the button working when
+ * JavaScript has not loaded yet. useFormStatus reads the pending state of the
+ * form it sits inside, so the label can change without taking that away.
  */
-export function NewInvoiceButton() {
-  const [busy, setBusy] = useState(false);
-
+function Submit() {
+  const { pending } = useFormStatus();
   return (
-    <form
-      action={async () => {
-        setBusy(true);
-        await createDraftInvoice();
-      }}
-    >
-      <button className="btn btn-primary" type="submit" disabled={busy}>
-        {busy ? (
-          <Loader2 size={16} strokeWidth={2.5} className="animate-spin" aria-hidden />
-        ) : (
-          <Plus size={16} strokeWidth={2.5} aria-hidden />
-        )}
-        {busy ? "Opening…" : "New invoice"}
-      </button>
+    <button className="btn btn-primary" type="submit" disabled={pending}>
+      {pending ? (
+        <Loader2 size={16} strokeWidth={2.5} className="animate-spin" aria-hidden />
+      ) : (
+        <Plus size={16} strokeWidth={2.5} aria-hidden />
+      )}
+      {pending ? "Opening…" : "New invoice"}
+    </button>
+  );
+}
+
+export function NewInvoiceButton() {
+  return (
+    <form action={createDraftInvoice}>
+      <Submit />
     </form>
   );
 }

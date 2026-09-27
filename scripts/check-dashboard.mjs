@@ -34,7 +34,13 @@ ck("the month chart skips empty months",!b.includes(">0.00<"));
 ck("aging chart appears only when something is late",
    b.includes("How overdue") === b.includes("days late"));
 ck("has top customers when there are any",b.includes("Biggest customers")||b.includes("Nothing to show yet"));
-ck("uses the accessible data colour, not the light brand orange",b.includes("#b35c00")&&!b.includes("background-color:#ff8a1e"));
-ck("charts are real tables, so a screen reader can read them",b.includes("<caption"));
+// Only when there are charts to colour: on an empty database the dashboard
+// shows a first-run message instead, which is correct.
+const hasCharts=b.includes("Billed each month")||b.includes("Biggest customers");
+ck("chart colour is the accessible one, never the light brand orange",
+   hasCharts?(b.includes("#b35c00")&&!b.includes("background-color:#ff8a1e")):true,
+   hasCharts?"":"(no charts yet)");
+ck("charts are real tables, so a screen reader can read them",hasCharts?b.includes("<caption"):true,
+   hasCharts?"":"(no charts yet)");
 console.log(fail?`\n${fail} FAILED`:"\nall dashboard checks passed");
 process.exit(fail?1:0);
