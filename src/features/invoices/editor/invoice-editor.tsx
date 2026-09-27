@@ -14,11 +14,13 @@ import { changesForVersion, issueInvoice, saveDraft } from "../actions";
 import type { CatalogItem } from "@/features/catalog/queries";
 import type { SellerOption } from "@/features/companies/queries";
 import type { PaymentRow } from "../payments";
+import type { ShareLink } from "../share";
 import type { TimelineEntry } from "../versions";
 import { DuplicateButton } from "./duplicate-button";
 import { HistoryDrawer } from "./history-drawer";
 import { PaymentsPanel } from "./payments-panel";
 import { SendButton } from "./send-dialog";
+import { ShareButton } from "./share-dialog";
 import { CustomerPicker, snapshotOf, type PickableCustomer } from "./customer-picker";
 import { LineGrid } from "./line-grid";
 import { useAutosave } from "./use-autosave";
@@ -43,6 +45,7 @@ export function InvoiceEditor({
   catalog,
   canSend,
   payments,
+  shareLinks,
 }: {
   id: string;
   number: string;
@@ -57,6 +60,7 @@ export function InvoiceEditor({
   catalog: CatalogItem[];
   canSend: boolean;
   payments: PaymentRow[];
+  shareLinks: ShareLink[];
 }) {
   const [draft, setDraft] = useState(initialDraft);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
@@ -127,6 +131,7 @@ export function InvoiceEditor({
 
         <div className="ml-auto flex items-center gap-2">
           {canSend && <SendButton invoiceId={id} disabled={state === "DRAFT"} />}
+          {canSend && <ShareButton invoiceId={id} links={shareLinks} disabled={state === "DRAFT"} />}
           {canEdit && <DuplicateButton descriptions={draft.lines.map((l) => l.description)} />}
           <button className="btn field-sm" onClick={() => setShowHistory(true)}>
             <History size={15} aria-hidden />

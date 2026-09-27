@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { formatMoney } from "@/domain/money/currency";
 import { createDraftInvoice } from "../actions";
+import { CaPackButton } from "./ca-pack-button";
 import { MarkPaidButton } from "./mark-paid-button";
 import type { InvoiceListRow } from "../queries";
 import { periodLabel, STATUS_STYLE } from "../status-style";
@@ -24,7 +25,7 @@ export function InvoiceList({
   return (
   
     <main className="mx-auto max-w-5xl px-4 py-6">
-      <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <header className="mb-5 flex flex-wrap items-end justify-between gap-2">
         <div>
           <h1 className="text-2xl">Invoices</h1>
           <p className="mt-0.5 text-sm text-mid">
@@ -32,6 +33,7 @@ export function InvoiceList({
             {period ? ` in ${periodLabel(period)}` : ""}
           </p>
         </div>
+        {canCreate && period && <CaPackButton period={period} />}
         {canCreate && (
           <form action={createDraftInvoice}>
             <button className="btn btn-primary" type="submit">

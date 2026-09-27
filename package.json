@@ -19,7 +19,8 @@
     "check:customers": "node scripts/check-customers.mjs",
     "check:companies": "node scripts/check-companies.mjs",
     "check:send": "node scripts/check-send.mjs",
-    "check:payments": "node scripts/check-payments.mjs"
+    "check:payments": "node scripts/check-payments.mjs",
+    "check:share": "node scripts/check-share.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

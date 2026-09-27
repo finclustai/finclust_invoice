@@ -3,7 +3,9 @@ import { AuthError } from "@/features/auth/permissions";
 import { saveCustomer } from "@/features/customers/actions";
 import { issueInvoice, restoreVersion, saveDraft } from "@/features/invoices/actions";
 import { listPayments, markPaidInFull, recordPayment, removePayment } from "@/features/invoices/payments";
+import { buildCaPack, previewPack } from "@/features/invoices/ca-pack";
 import { prepareSend, sendInvoice } from "@/features/invoices/send";
+import { listShareLinks, revokeShareLink, shareInvoice } from "@/features/invoices/share";
 import { listTimeline } from "@/features/invoices/versions";
 import { db } from "@/infra/db";
 
@@ -26,6 +28,7 @@ const DISABLED = process.env.NODE_ENV === "production" || process.env.ENABLE_DEV
 const ACTIONS = {
   saveDraft, issueInvoice, restoreVersion, prepareSend, sendInvoice,
   recordPayment, removePayment, markPaidInFull, listPayments,
+  shareInvoice, revokeShareLink, listShareLinks, previewPack, buildCaPack,
 } as const;
 
 /** saveCustomer takes FormData, so the scripts send plain fields. */
