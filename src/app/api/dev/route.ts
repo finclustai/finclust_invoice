@@ -1,6 +1,7 @@
 import { requireUser } from "@/features/auth/current-user";
 import { AuthError } from "@/features/auth/permissions";
-import { issueInvoice, saveDraft } from "@/features/invoices/actions";
+import { issueInvoice, restoreVersion, saveDraft } from "@/features/invoices/actions";
+import { listTimeline } from "@/features/invoices/versions";
 import { db } from "@/infra/db";
 
 /**
@@ -19,7 +20,7 @@ import { db } from "@/infra/db";
  */
 const DISABLED = process.env.NODE_ENV === "production" || process.env.ENABLE_DEV_TEST_HOOKS !== "1";
 
-const ACTIONS = { saveDraft, issueInvoice } as const;
+const ACTIONS = { saveDraft, issueInvoice, restoreVersion } as const;
 
 export async function GET(req: Request) {
   if (DISABLED) return new Response("Not found", { status: 404 });
@@ -34,6 +35,10 @@ export async function GET(req: Request) {
 
   const id = url.searchParams.get("id");
   if (!id) return new Response("id required", { status: 400 });
+
+  if (url.searchParams.get("what") === "timeline") {
+    return Response.json(await listTimeline(id));
+  }
   const row = await db.invoice.findUnique({
     where: { id },
     select: {

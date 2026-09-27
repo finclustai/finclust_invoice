@@ -1,6 +1,7 @@
 import { calculateInvoice } from "@/domain/invoice/calculate";
 import { invoiceDraftSchema, type InvoiceDraft } from "@/domain/invoice/schema";
 import { draftToRow } from "./mapping";
+import { recordVersion } from "./record-version";
 
 export type SaveResult =
   | { ok: true; version: number }
@@ -12,11 +13,18 @@ export type SaveResult =
  */
 type WriteDb = {
   invoice: {
-    findUnique(args: unknown): Promise<{ state: string } | null>;
+    findUnique(args: unknown): Promise<{ state: string; number: string; company: { name: string } } | null>;
     updateMany(args: unknown): Promise<{ count: number }>;
   };
   invoiceLine: { deleteMany(args: unknown): Promise<unknown>; createMany(args: unknown): Promise<unknown> };
   activityLog: { create(args: unknown): Promise<unknown> };
+  invoiceVersion: {
+    findFirst(args: unknown): Promise<{
+      id: string; userId: string | null; createdAt: Date; updatedAt: Date; changeCount: number; reason: string;
+    } | null>;
+    create(args: unknown): Promise<unknown>;
+    update(args: unknown): Promise<unknown>;
+  };
   $transaction<T>(fn: (tx: WriteDb) => Promise<T>): Promise<T>;
 };
 
@@ -39,6 +47,10 @@ export async function writeDraft(
     draft: InvoiceDraft;
     sellerStateCode: string;
     actorId?: string | null;
+    /** Injectable so the session-coalescing tests need no real clock. */
+    now?: Date;
+    /** Labels the timeline entry; anything but "Edited" stands alone. */
+    reason?: string;
   },
 ): Promise<SaveResult> {
   const client = db as WriteDb;
@@ -47,7 +59,10 @@ export async function writeDraft(
     return { ok: false, reason: "invalid", problems: parsed.error.issues.map((i) => i.message) };
   }
 
-  const current = await client.invoice.findUnique({ where: { id: opts.id }, select: { state: true } });
+  const current = await client.invoice.findUnique({
+    where: { id: opts.id },
+    select: { state: true, number: true, company: { select: { name: true } } },
+  });
   if (!current) return { ok: false, reason: "missing", problems: ["That invoice no longer exists"] };
   // A cancelled invoice keeps its number so the GST series has no gaps; it must
   // stay exactly as it was when it was cancelled.
@@ -75,9 +90,21 @@ export async function writeDraft(
     await tx.invoiceLine.createMany({ data: lines.map((l) => ({ ...l, invoiceId: opts.id })) });
     // In the same transaction as the write, so an edit can never happen
     // unlogged, nor be logged without happening.
+    const version = opts.expectedVersion + 1;
+    // In the same transaction as the write, so the history cannot disagree
+    // with what is on the invoice.
+    await recordVersion(tx, {
+      invoiceId: opts.id,
+      version,
+      snapshot: { ...parsed.data, number: current.number, companyName: current.company.name },
+      reason: opts.reason ?? "Edited",
+      userId: opts.actorId ?? null,
+      state: current.state as never,
+      now: opts.now ?? new Date(),
+    });
     await tx.activityLog.create({
       data: { actorId: opts.actorId ?? null, entity: "invoice", entityId: opts.id, action: "edited" },
     });
-    return { ok: true, version: opts.expectedVersion + 1 };
+    return { ok: true, version };
   });
 }

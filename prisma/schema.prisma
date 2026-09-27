@@ -155,9 +155,18 @@ model InvoiceVersion {
   snapshot  Json
   reason    String
   userId    String?  @map("user_id") @db.Uuid
+  /// How many saves this sitting absorbed, so an afternoon of autosaves reads
+  /// as one entry without losing that it was more than one change.
+  changeCount Int    @default(1) @map("change_count")
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
-  @@unique([invoiceId, version])
+  /// Deliberately not unique with version: a timeline entry records which
+  /// invoice version it produced, and issuing writes its own milestone entry
+  /// at the same version as the save that preceded it. Entries are identified
+  /// by id and ordered by createdAt.
+  @@index([invoiceId, createdAt(sort: Desc)])
+  @@index([invoiceId, version])
   @@map("invoice_versions")
 }
 

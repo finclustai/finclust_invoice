@@ -8,5 +8,13 @@ if (existsSync(".env")) process.loadEnvFile(".env");
 
 export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-  test: { include: ["src/**/*.test.ts"], environment: "node" },
+  test: {
+    include: ["src/**/*.test.ts"],
+    environment: "node",
+    // The integration tests talk to Supabase over the network, and several make
+    // a handful of sequential round trips. The default 5s trips on latency
+    // rather than on anything being wrong.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
+  },
 });

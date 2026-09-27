@@ -3,14 +3,16 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { AlertCircle, ArrowLeft, Check, Download, Loader2, Send } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, Download, History, Loader2, Send } from "lucide-react";
 import { calculateInvoice } from "@/domain/invoice/calculate";
 import type { InvoiceDraft } from "@/domain/invoice/schema";
 import type { InvoiceState } from "@/domain/invoice/status";
 import { formatMoney } from "@/domain/money/currency";
 import { CURRENCY_CODES, type CurrencyCode } from "@/domain/money/currency";
 import { buildDocumentProps, type CompanyForPdf } from "@/pdf/props";
-import { issueInvoice, saveDraft } from "../actions";
+import { changesForVersion, issueInvoice, saveDraft } from "../actions";
+import type { TimelineEntry } from "../versions";
+import { HistoryDrawer } from "./history-drawer";
 import { CustomerPicker, snapshotOf, type PickableCustomer } from "./customer-picker";
 import { LineGrid } from "./line-grid";
 import { useAutosave } from "./use-autosave";
@@ -30,6 +32,7 @@ export function InvoiceEditor({
   company,
   customers,
   canEdit,
+  timeline,
 }: {
   id: string;
   number: string;
@@ -39,11 +42,13 @@ export function InvoiceEditor({
   company: CompanyForPdf;
   customers: PickableCustomer[];
   canEdit: boolean;
+  timeline: TimelineEntry[];
 }) {
   const [draft, setDraft] = useState(initialDraft);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
   const [issuing, setIssuing] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [problems, setProblems] = useState<string[]>([]);
 
   // Every total on the screen and in the PDF comes from here. Nothing is typed.
@@ -98,6 +103,11 @@ export function InvoiceEditor({
         <SaveIndicator state={save} />
 
         <div className="ml-auto flex items-center gap-2">
+          <button className="btn field-sm" onClick={() => setShowHistory(true)}>
+            <History size={15} aria-hidden />
+            History
+            {timeline.length > 0 && <span className="chip status-draft">{timeline.length}</span>}
+          </button>
           <button className="btn field-sm" onClick={onDownload} disabled={downloading}>
             {downloading ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Download size={15} aria-hidden />}
             Download
@@ -110,6 +120,16 @@ export function InvoiceEditor({
           )}
         </div>
       </header>
+
+      {showHistory && (
+        <HistoryDrawer
+          invoiceId={id}
+          entries={timeline}
+          canRestore={canEdit}
+          onClose={() => setShowHistory(false)}
+          loadChanges={(versionId) => changesForVersion(id, versionId)}
+        />
+      )}
 
       {save.status === "conflict" && (
         <p role="alert" className="error-line m-3">

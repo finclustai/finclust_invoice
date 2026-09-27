@@ -10,6 +10,7 @@ import { requireUser } from "@/features/auth/current-user";
 import { db } from "@/infra/db";
 import { allocateInvoiceNumber } from "./allocate-number";
 import { draftToRow } from "./mapping";
+import { loadVersionWithDiff } from "./versions";
 import { writeDraft, type SaveResult } from "./write-draft";
 
 export type { SaveResult } from "./write-draft";
@@ -192,4 +193,61 @@ export async function issueInvoice(
     console.error("[issueInvoice]", error);
     return { ok: false, problems: ["Could not issue the invoice. Please try again."] };
   }
+}
+
+/**
+ * Puts an earlier version's content back.
+ *
+ * Deliberately a forward write, not a rewind: the old content becomes the new
+ * content and the timeline gains an entry saying so. Nothing is deleted, so
+ * the record of what happened survives the undo. The number, the state and the
+ * GST series are untouched — only what the invoice says comes back.
+ */
+export async function restoreVersion(
+  id: string,
+  versionId: string,
+): Promise<{ ok: true } | { ok: false; problems: string[] }> {
+  const user = await requireUser("write");
+
+  const invoice = await db.invoice.findUnique({
+    where: { id },
+    select: { state: true, version: true, company: { select: { stateCode: true } } },
+  });
+  if (!invoice) return { ok: false, problems: ["That invoice no longer exists"] };
+  if (invoice.state === "CANCELLED") return { ok: false, problems: ["A cancelled invoice can’t be changed"] };
+
+  const target = await loadVersionWithDiff(id, versionId);
+  if (!target) return { ok: false, problems: ["That version no longer exists"] };
+
+  const { number: _n, companyName: _c, ...draft } = target.snapshot;
+  const saved = await writeDraft(db, {
+    id,
+    expectedVersion: invoice.version,
+    draft,
+    sellerStateCode: invoice.company.stateCode,
+    actorId: user.id,
+    reason: "Restored",
+  });
+  if (!saved.ok) {
+    return {
+      ok: false,
+      problems: [
+        saved.reason === "conflict"
+          ? "Someone else changed this invoice. Reload and try again."
+          : (saved.problems?.[0] ?? "Could not restore that version"),
+      ],
+    };
+  }
+
+  await db.activityLog.create({
+    data: { actorId: user.id, entity: "invoice", entityId: id, action: "restored" },
+  });
+  revalidatePath(`/invoices/${id}`);
+  return { ok: true };
+}
+
+/** The change list for one timeline entry, fetched when it is expanded. */
+export async function changesForVersion(invoiceId: string, versionId: string) {
+  await requireUser("read");
+  return (await loadVersionWithDiff(invoiceId, versionId))?.changes ?? [];
 }
