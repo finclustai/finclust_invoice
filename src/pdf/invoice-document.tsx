@@ -25,11 +25,13 @@ const s = StyleSheet.create({
   title: { fontSize: 22, fontFamily: "Helvetica-Bold", color: INK, textAlign: "right", letterSpacing: -0.5 },
   number: { fontSize: 10, fontFamily: "Helvetica-Bold", color: MID, textAlign: "right", marginTop: 2 },
 
-  metaRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 10 },
-  metaLabel: { fontSize: 7.5, color: MID, letterSpacing: 0.8, textAlign: "right" },
-  metaValue: { fontSize: 9.5, color: INK, textAlign: "right", marginTop: 1.5 },
+  headerRight: { alignItems: "flex-end" },
+  metaTable: { marginTop: 12 },
+  metaRow: { flexDirection: "row", alignItems: "baseline", marginBottom: 3 },
+  metaLabel: { fontSize: 7.5, color: MID, letterSpacing: 0.8, textAlign: "right", width: 44 },
+  metaValue: { fontSize: 9.5, color: INK, textAlign: "right", width: 110 },
 
-  dueBox: { marginTop: 10, backgroundColor: SAND, borderRadius: 4, paddingVertical: 7, paddingHorizontal: 11, alignSelf: "flex-end", minWidth: 165 },
+  dueBox: { marginTop: 12, backgroundColor: SAND, borderRadius: 4, paddingVertical: 7, paddingHorizontal: 11, alignSelf: "flex-end", minWidth: 165 },
   dueLabel: { fontSize: 7.5, color: MID, letterSpacing: 0.8, textAlign: "right" },
   dueValue: { fontSize: 14, fontFamily: "Helvetica-Bold", color: INK, textAlign: "right", marginTop: 2 },
 
@@ -62,7 +64,6 @@ const s = StyleSheet.create({
   wordsLabel: { fontFamily: "Helvetica-Bold", color: INK },
 
   note: { marginTop: 14, fontSize: 8.5, color: BODY, lineHeight: 1.45 },
-  lut: { marginTop: 14, fontSize: 8, color: MID, fontFamily: "Helvetica-Oblique", lineHeight: 1.45 },
 
   payment: { marginTop: 26, borderTopWidth: 0.5, borderTopColor: LINE, paddingTop: 12 },
   payName: { fontSize: 9, fontFamily: "Helvetica-Bold", color: INK, marginBottom: 3 },
@@ -74,6 +75,16 @@ const s = StyleSheet.create({
   },
   footer: { position: "absolute", bottom: 26, left: 44, right: 44, fontSize: 7.5, color: MID, textAlign: "center" },
 });
+
+/** One right-aligned label/value line in the header block. */
+function MetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={s.metaRow}>
+      <Text style={s.metaLabel}>{label}</Text>
+      <Text style={s.metaValue}>{value}</Text>
+    </View>
+  );
+}
 
 export function InvoiceDocument({ doc }: { doc: InvoiceDocumentProps }) {
   const { seller, customer, calc, currency } = doc;
@@ -102,31 +113,18 @@ export function InvoiceDocument({ doc }: { doc: InvoiceDocumentProps }) {
             {seller.lut && <Text style={s.sellerLine}>LUT: {seller.lut}</Text>}
           </View>
 
-          <View>
+          <View style={s.headerRight}>
             <Text style={s.title}>Invoice</Text>
             <Text style={s.number}>{doc.number}</Text>
-            <View style={s.metaRow}>
-              <View>
-                <Text style={s.metaLabel}>DATE</Text>
-                <Text style={s.metaValue}>{doc.issueDateLabel}</Text>
-              </View>
+
+            <View style={s.metaTable}>
+              <MetaRow label="DATE" value={doc.issueDateLabel} />
+              {/* Each line appears only when it has something to say, so an
+                  invoice with no due date shows no empty Due row. */}
+              {doc.dueDateLabel && <MetaRow label="DUE" value={doc.dueDateLabel} />}
+              {doc.paymentTerms && <MetaRow label="TERMS" value={doc.paymentTerms} />}
             </View>
-            {doc.dueDateLabel && (
-              <View style={s.metaRow}>
-                <View>
-                  <Text style={s.metaLabel}>DUE</Text>
-                  <Text style={s.metaValue}>{doc.dueDateLabel}</Text>
-                </View>
-              </View>
-            )}
-            {doc.paymentTerms && (
-              <View style={s.metaRow}>
-                <View>
-                  <Text style={s.metaLabel}>TERMS</Text>
-                  <Text style={s.metaValue}>{doc.paymentTerms}</Text>
-                </View>
-              </View>
-            )}
+
             <View style={s.dueBox}>
               <Text style={s.dueLabel}>BALANCE DUE</Text>
               <Text style={s.dueValue}>{formatMoneyWithCode(calc.totalMinor, currency)}</Text>
@@ -186,13 +184,6 @@ export function InvoiceDocument({ doc }: { doc: InvoiceDocumentProps }) {
           <Text style={s.wordsLabel}>Amount in words: </Text>
           {calc.totalInWords}
         </Text>
-
-        {doc.showLut && (
-          <Text style={s.lut}>
-            Supply meant for export under LUT without payment of IGST
-            {seller.lut ? ` (LUT: ${seller.lut})` : ""}.
-          </Text>
-        )}
 
         {doc.notes && <Text style={s.note}>{doc.notes}</Text>}
 

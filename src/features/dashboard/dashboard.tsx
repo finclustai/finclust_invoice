@@ -13,7 +13,6 @@ import type { CurrencySummary } from "./queries";
  * readable without relying on the colour at all.
  */
 const DATA = "#b35c00";
-const DATA_SOFT = "#f0e2d2";
 
 export function Dashboard({ currencies, today }: { currencies: CurrencySummary[]; today: string }) {
   if (currencies.length === 0) {
@@ -54,6 +53,8 @@ export function Dashboard({ currencies, today }: { currencies: CurrencySummary[]
 function CurrencySection({ summary, today }: { summary: CurrencySummary; today: string }) {
   const { currency } = summary;
   const thisMonth = periodLabel(`${today.slice(2, 4)}${today.slice(5, 7)}`);
+  const billedMonths = summary.monthly.filter((m) => m.billedMinor > 0);
+  const lateBuckets = summary.aging.filter((a) => a.bucket !== "current" && a.amountMinor > 0);
 
   return (
     <section>
@@ -78,36 +79,47 @@ function CurrencySection({ summary, today }: { summary: CurrencySummary; today: 
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card title="Billed each month" subtitle="The last twelve months">
-          <Bars
-            rows={summary.monthly.map((m) => ({
-              label: periodLabel(m.period).replace(/ \d{4}$/, ""),
-              value: m.billedMinor,
-            }))}
-            currency={currency}
-            emptyMessage="Nothing billed yet."
-          />
-        </Card>
+        {/* Only months that had invoices: eleven rows of 0.00 told you nothing
+            and pushed everything that matters below the fold. */}
+        {billedMonths.length > 0 && (
+          <Card title="Billed each month" subtitle={`${billedMonths.length} of the last 12 months`}>
+            <Bars
+              rows={billedMonths.map((m) => ({
+                label: periodLabel(m.period).replace(/ (\d{2})\d{2}$/, " ’$1"),
+                value: m.billedMinor,
+              }))}
+              currency={currency}
+            />
+          </Card>
+        )}
 
-        <Card title="How overdue" subtitle="What is owed, by how late it is">
-          <Bars
-            rows={summary.aging.map((a) => ({
-              label: a.label,
-              value: a.amountMinor,
-              note: a.count ? `${a.count}` : "",
-            }))}
-            currency={currency}
-            emptyMessage="Nothing outstanding."
-          />
-        </Card>
+        {/* Only when something is actually late. A column of zeroes is not
+            reassurance, it is noise. */}
+        {lateBuckets.length > 0 && (
+          <Card title="How overdue" subtitle="What is owed, by how late it is">
+            <Bars
+              rows={lateBuckets.map((a) => ({
+                label: a.label,
+                value: a.amountMinor,
+                note: `${a.count}`,
+              }))}
+              currency={currency}
+            />
+          </Card>
+        )}
 
-        <Card title="Biggest customers" subtitle="By total billed" className="lg:col-span-2">
-          <Bars
-            rows={summary.topCustomers.map((c) => ({ label: c.name, value: c.billedMinor }))}
-            currency={currency}
-            emptyMessage="No invoices yet."
-          />
-        </Card>
+        {summary.topCustomers.length > 0 && (
+          <Card
+            title="Biggest customers"
+            subtitle="By total billed"
+            className={lateBuckets.length > 0 && billedMonths.length > 0 ? "lg:col-span-2" : ""}
+          >
+            <Bars
+              rows={summary.topCustomers.map((c) => ({ label: c.name, value: c.billedMinor }))}
+              currency={currency}
+            />
+          </Card>
+        )}
       </div>
     </section>
   );
@@ -163,14 +175,12 @@ function Card({
 function Bars({
   rows,
   currency,
-  emptyMessage,
 }: {
   rows: { label: string; value: number; note?: string }[];
   currency: CurrencyCode;
-  emptyMessage: string;
 }) {
   const max = Math.max(...rows.map((r) => r.value), 0);
-  if (max === 0) return <p className="py-6 text-center text-sm text-mid">{emptyMessage}</p>;
+  if (max === 0) return null;
 
   return (
     <table className="w-full text-sm">
@@ -187,12 +197,7 @@ function Bars({
               <span className="flex items-center gap-2">
                 <span
                   className="h-3.5 rounded-r-[3px]"
-                  style={{
-                    // A zero-value row still shows a sliver, so the row reads as
-                    // "nothing here" rather than as a missing row.
-                    width: `max(2px, ${(r.value / max) * 100}%)`,
-                    backgroundColor: r.value > 0 ? DATA : DATA_SOFT,
-                  }}
+                  style={{ width: `max(2px, ${(r.value / max) * 100}%)`, backgroundColor: DATA }}
                   aria-hidden
                 />
                 <span className="tnum shrink-0 text-xs text-body">

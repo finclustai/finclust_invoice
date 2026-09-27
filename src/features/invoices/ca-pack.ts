@@ -1,6 +1,7 @@
 "use server";
 
-import { buildInvoiceEmail } from "@/domain/invoice/email";
+import { fillTemplate } from "@/domain/invoice/email";
+import { loadTemplates } from "@/features/settings/templates";
 import { buildSummaryCsv, type SummaryRow } from "@/domain/invoice/summary-csv";
 import { deriveStatus } from "@/domain/invoice/status";
 import { businessDay } from "@/domain/invoice/today";
@@ -137,23 +138,24 @@ export async function buildCaPack(
     attachments.push(await uploadAttachment(csv, `invoices-${period}.csv`));
 
     const company = rows[0]!.company;
-    const { subject, html } = buildInvoiceEmail("accountant", {
-      number: "",
-      customerName: "",
-      companyName: company.name,
+    const templates = await loadTemplates();
+    const { subject, html } = fillTemplate(templates.accountant, {
+      invoice_number: "",
+      customer: "",
+      company: company.name,
       total: "",
-      issueDate: "",
-      dueDate: null,
-      count: rows.length,
+      invoice_date: "",
+      due_date: "",
+      month: periodLabel(period),
+      count: String(rows.length),
     });
 
     await createDraft({
       to,
       cc: emails(input.cc),
-      subject: `${subject} — ${periodLabel(period)}`,
+      subject,
       html:
         html +
-        `<p style="margin:0 0 14px">The attached spreadsheet lists the taxable value and tax split for each one.</p>` +
         (skipped.length
           ? `<p style="margin:0 0 14px">${skipped.length} invoice(s) were too large to attach and are listed in the spreadsheet only: ${skipped.join(", ")}.</p>`
           : ""),

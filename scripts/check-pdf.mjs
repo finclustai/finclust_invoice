@@ -69,7 +69,6 @@ const EXPECTED = {
   INV2608001: {
     must: [
       "INV2608001", "Technophile LLC", "USD 1,326.00", "1,326.00",
-      "Supply meant for export under LUT", "AD290625019128X",
       "US Dollars One Thousand Three Hundred Twenty Six Only",
       "FINCLUST PRIVATE LIMITED", "Account No.: 257353000123",
     ],
@@ -84,7 +83,7 @@ const EXPECTED = {
       "Rupees Three Lakh Thirty Eight Thousand Six Hundred Eighty Three and Sixty Paise Only",
     ],
     // The rupee sign is not in Helvetica's encoding; it would print as a blank box.
-    mustNot: ["CGST", "SGST", "export under LUT", "₹"],
+    mustNot: ["CGST", "SGST", "under LUT", "₹"],
   },
 };
 

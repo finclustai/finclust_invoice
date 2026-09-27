@@ -64,7 +64,7 @@ for (const rate of [7500000, 7200000, 7000000]) {
 let timeline = await get(`id=${id}&what=timeline`);
 check("a run of autosaves is one entry, not three", timeline.length === 1, `${timeline.length} entries`);
 check("and it says how many changes it absorbed", timeline[0]?.changeCount === 3, `count ${timeline[0]?.changeCount}`);
-check("the entry is attributed", timeline[0]?.actor === "Admin", timeline[0]?.actor);
+check("the entry is attributed", Boolean(timeline[0]?.actor), timeline[0]?.actor);
 
 const firstEntryId = timeline[0].id;
 

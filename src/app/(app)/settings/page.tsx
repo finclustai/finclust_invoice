@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, ChevronRight } from "lucide-react";
+import { Building2, ChevronRight, Mail } from "lucide-react";
 import { requireUser } from "@/features/auth/current-user";
 
 export default async function SettingsPage() {
@@ -18,8 +18,20 @@ export default async function SettingsPage() {
             <ChevronRight size={16} className="text-mid" aria-hidden />
           </Link>
         </li>
+        <li>
+          <Link href="/settings/templates" className="card flex items-center gap-3 p-4 hover:bg-sand">
+            <Mail size={18} className="text-mid" aria-hidden />
+            <span className="flex-1">
+              <span className="block font-semibold">Email templates</span>
+              <span className="block text-xs text-mid">
+                What the Send box starts with, for customers and for your accountant
+              </span>
+            </span>
+            <ChevronRight size={16} className="text-mid" aria-hidden />
+          </Link>
+        </li>
       </ul>
-      <p className="hint mt-4">Users, the invoice template and where invoices are sent arrive in a later phase.</p>
+      <p className="hint mt-4">Managing users arrives in a later phase.</p>
     </main>
   );
 }

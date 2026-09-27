@@ -21,7 +21,10 @@ export function SidebarNav({ user }: { user: SessionUser }) {
   return (
     <nav
       aria-label="Main"
-      className="flex items-center gap-2 overflow-x-auto border-b border-line bg-paper px-3 py-2 lg:h-dvh lg:flex-col lg:items-stretch lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-3 lg:py-4"
+      // sticky + h-dvh keeps the nav in place while the page scrolls; without
+      // the sticky it scrolled away with the content and left the user's name
+      // stranded halfway down.
+      className="flex items-center gap-2 overflow-x-auto border-b border-line bg-paper px-3 py-2 lg:sticky lg:top-0 lg:h-dvh lg:flex-col lg:items-stretch lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-3 lg:py-4"
     >
       <Link href="/" className="shrink-0 px-2 py-1 lg:mb-4">
         <span className="font-mono text-[10px] tracking-[0.2em] text-mid">FINCLUST</span>

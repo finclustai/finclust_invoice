@@ -77,6 +77,10 @@ export function LineGrid({ catalog, lines, calc, currency, showHsn, disabled, on
       </div>
 
       <DndContext
+        // Without a fixed id, dnd-kit numbers its own accessibility element
+        // from a counter that starts over on the client, so the server sends
+        // aria-describedby="DndDescribedBy-1" and React then renders -0.
+        id="invoice-lines"
         sensors={sensors}
         collisionDetection={closestCenter}
         modifiers={[restrictToVerticalAxis]}

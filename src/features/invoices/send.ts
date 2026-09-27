@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { buildInvoiceEmail, type Audience } from "@/domain/invoice/email";
+import { fillTemplate, type Audience } from "@/domain/invoice/email";
+import { loadTemplates } from "@/features/settings/templates";
 import { formatMoneyWithCode, type CurrencyCode } from "@/domain/money/currency";
 import { requireUser } from "@/features/auth/current-user";
 import { db } from "@/infra/db";
@@ -49,14 +50,18 @@ export async function prepareSend(invoiceId: string, audience: Audience): Promis
 
   const { draft, number, state, company } = invoice;
   const doc = buildDocumentProps(draft, company, number, state);
-  const { subject, html } = buildInvoiceEmail(audience, {
-    number: doc.number,
-    customerName: draft.customer.name,
-    companyName: company.name,
+  const templates = await loadTemplates();
+  const { subject, html } = fillTemplate(templates[audience], {
+    invoice_number: doc.number,
+    customer: draft.customer.name,
+    company: company.name,
     total: formatMoneyWithCode(doc.calc.totalMinor, draft.currency as CurrencyCode),
-    issueDate: formatLongDate(draft.issueDate),
-    dueDate: draft.dueDate ? formatLongDate(draft.dueDate) : null,
-    count: 1,
+    invoice_date: formatLongDate(draft.issueDate),
+    // Empty rather than a placeholder: a paragraph that mentions the due date
+    // is then dropped, instead of going out as "Payment is due by ."
+    due_date: draft.dueDate ? formatLongDate(draft.dueDate) : "",
+    month: "",
+    count: "1",
   });
 
   // Who this mailbox has written to before, so the CA's address is typed once.

@@ -23,8 +23,12 @@ ck("shows billed this month",b.includes("Billed this month"));
 ck("shows what is owed",b.includes("Still owed"));
 ck("shows overdue",b.includes("Overdue"));
 ck("shows GST collected",b.includes("GST this month"));
-ck("has the twelve-month chart",b.includes("Billed each month"));
-ck("has the aging chart",b.includes("How overdue"));
+ck("has the month chart",b.includes("Billed each month"));
+ck("the month chart skips empty months",!b.includes(">0.00<"));
+// The aging chart appears only when something is actually late; a column of
+// zeroes is noise, not reassurance.
+ck("aging chart appears only when something is late",
+   b.includes("How overdue") === b.includes("days late"));
 ck("has top customers",b.includes("Biggest customers")&&b.includes("ALSUM"));
 ck("uses the accessible data colour, not the light brand orange",b.includes("#b35c00")&&!b.includes("background-color:#ff8a1e"));
 ck("charts are real tables, so a screen reader can read them",b.includes("<caption"));
