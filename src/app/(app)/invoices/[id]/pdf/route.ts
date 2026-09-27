@@ -10,7 +10,23 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   if (!invoice) return new Response("Not found", { status: 404 });
 
   const doc = buildDocumentProps(invoice.draft, invoice.company, invoice.number, invoice.state);
-  const pdf = await renderInvoicePdf(doc);
+
+  let pdf: Buffer;
+  try {
+    pdf = await renderInvoicePdf(doc);
+  } catch (error) {
+    // Shown rather than swallowed: this route is behind requireUser, so only
+    // someone already signed in can read it, and "try reloading" told nobody
+    // anything when the renderer failed on the deployed site.
+    const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.error("[invoice pdf]", error);
+    return new Response(`Could not draw this invoice.
+
+${detail}`, {
+      status: 500,
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+    });
+  }
 
   // ?inline=1 is what the preview iframe uses; a plain hit downloads the file.
   const inline = new URL(req.url).searchParams.get("inline") === "1";
