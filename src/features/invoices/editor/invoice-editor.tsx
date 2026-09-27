@@ -235,7 +235,7 @@ export function InvoiceEditor({
           </div>
         </div>
         <div className={`min-h-0 border-line lg:border-l ${tab === "preview" ? "" : "hidden lg:block"}`}>
-          <PdfCanvas doc={docProps} />
+          <PdfCanvas doc={docProps} invoiceId={id} />
         </div>
       </div>
     </div>

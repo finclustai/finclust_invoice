@@ -16,7 +16,7 @@ const RERENDER_MS = 400;
  * and only its `src` changes, which keeps the browser's PDF viewer from
  * jumping back to page one every time typing pauses on a long invoice.
  */
-export default function PdfCanvas({ doc }: { doc: InvoiceDocumentProps }) {
+export default function PdfCanvas({ doc, invoiceId }: { doc: InvoiceDocumentProps; invoiceId: string }) {
   const [settled, setSettled] = useState(doc);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -40,11 +40,21 @@ export default function PdfCanvas({ doc }: { doc: InvoiceDocumentProps }) {
   }, [settled, update]);
 
   if (instance.error) {
+    // Says what went wrong rather than "try reloading", which told nobody
+    // anything when this failed on the deployed site. The invoice is behind a
+    // login, so the detail only reaches someone already signed in.
     return (
-      <div className="grid h-full place-items-center bg-sand p-6 text-center">
-        <p className="error-line">
-          Could not draw the preview. The invoice itself is safe — try reloading.
-        </p>
+      <div className="grid h-full place-items-center bg-sand p-6">
+        <div className="error-line block max-w-md">
+          <p className="font-semibold">Could not draw the preview.</p>
+          <p className="mt-1 text-xs">Your invoice is safe — this is only the picture of it.</p>
+          <pre className="mt-2 overflow-x-auto text-[11px] whitespace-pre-wrap">
+            {String(instance.error)}
+          </pre>
+          <a className="btn field-sm mt-3" href={`/invoices/${invoiceId}/pdf`}>
+            Download it instead
+          </a>
+        </div>
       </div>
     );
   }
