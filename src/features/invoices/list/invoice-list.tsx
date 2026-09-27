@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
 import { formatMoney } from "@/domain/money/currency";
-import { createDraftInvoice } from "../actions";
+import { NewInvoiceButton } from "./new-invoice-button";
 import { CaPackButton } from "./ca-pack-button";
 import { MarkPaidButton } from "./mark-paid-button";
 import type { InvoiceListRow } from "../queries";
@@ -34,14 +33,7 @@ export function InvoiceList({
           </p>
         </div>
         {canCreate && period && <CaPackButton period={period} />}
-        {canCreate && (
-          <form action={createDraftInvoice}>
-            <button className="btn btn-primary" type="submit">
-              <Plus size={16} strokeWidth={2.5} aria-hidden />
-              New invoice
-            </button>
-          </form>
-        )}
+        {canCreate && <NewInvoiceButton />}
       </header>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">

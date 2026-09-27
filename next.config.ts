@@ -16,9 +16,21 @@ import type { NextConfig } from "next";
 // possible route to running arbitrary code.
 const DEV_ONLY_EVAL = process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'";
 
+/*
+ * The live invoice preview draws the PDF in the browser, and the library that
+ * does it compiles a WebAssembly module to lay out the text. Instantiating
+ * WASM counts as dynamic code, so a policy without this blocks it — which is
+ * what left the preview panel showing an error on the deployed site.
+ *
+ * 'wasm-unsafe-eval' permits exactly that and nothing else. The alternative,
+ * 'unsafe-eval', would also re-open eval() and new Function() to any injected
+ * script, which is the single most useful thing an attacker could be handed.
+ */
+const WASM = " 'wasm-unsafe-eval'";
+
 const CSP = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${DEV_ONLY_EVAL} blob:`,
+  `script-src 'self' 'unsafe-inline'${WASM}${DEV_ONLY_EVAL} blob:`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   "img-src 'self' data: blob:",
