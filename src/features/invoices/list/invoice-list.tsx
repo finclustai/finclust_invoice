@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { formatMoney } from "@/domain/money/currency";
 import { createDraftInvoice } from "../actions";
+import { MarkPaidButton } from "./mark-paid-button";
 import type { InvoiceListRow } from "../queries";
 import { periodLabel, STATUS_STYLE } from "../status-style";
 
@@ -102,9 +103,9 @@ export function InvoiceList({
             <table className="w-full min-w-[640px] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-line text-left">
-                  {["Number", "Date", "Customer", "Status", "Total"].map((h) => (
+                  {["Number", "Date", "Customer", "Status", "Total", ""].map((h) => (
                     <th
-                      key={h}
+                      key={h || "actions"}
                       className={`px-4 py-2.5 text-xs font-bold tracking-wider text-mid uppercase ${h === "Total" ? "text-right" : ""}`}
                     >
                       {h}
@@ -129,6 +130,16 @@ export function InvoiceList({
                       </td>
                       <td className="tnum px-4 py-2.5 text-right font-semibold">
                         {formatMoney(inv.totalMinor, inv.currency)}
+                        {inv.outstandingMinor > 0 && inv.paidMinor > 0 && (
+                          <span className="block text-xs font-normal text-mid">
+                            {formatMoney(inv.outstandingMinor, inv.currency)} owed
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2.5 text-right">
+                        {canCreate && inv.status !== "draft" && inv.status !== "cancelled" && inv.outstandingMinor > 0 && (
+                          <MarkPaidButton id={inv.id} amount={formatMoney(inv.outstandingMinor, inv.currency)} />
+                        )}
                       </td>
                     </tr>
                   );

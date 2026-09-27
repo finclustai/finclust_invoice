@@ -79,6 +79,7 @@ export interface InvoiceListRow {
   currency: CurrencyCode;
   totalMinor: number;
   paidMinor: number;
+  outstandingMinor: number;
   status: InvoiceStatus;
 }
 
@@ -127,6 +128,7 @@ export async function listInvoices(opts: { period?: string; search?: string } = 
       currency: r.currency as CurrencyCode,
       totalMinor: total,
       paidMinor: paid,
+      outstandingMinor: Math.max(0, total - paid),
       status: deriveStatus(
         {
           state: r.state,

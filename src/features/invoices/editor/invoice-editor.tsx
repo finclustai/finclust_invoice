@@ -13,9 +13,11 @@ import { buildDocumentProps, type CompanyForPdf } from "@/pdf/props";
 import { changesForVersion, issueInvoice, saveDraft } from "../actions";
 import type { CatalogItem } from "@/features/catalog/queries";
 import type { SellerOption } from "@/features/companies/queries";
+import type { PaymentRow } from "../payments";
 import type { TimelineEntry } from "../versions";
 import { DuplicateButton } from "./duplicate-button";
 import { HistoryDrawer } from "./history-drawer";
+import { PaymentsPanel } from "./payments-panel";
 import { SendButton } from "./send-dialog";
 import { CustomerPicker, snapshotOf, type PickableCustomer } from "./customer-picker";
 import { LineGrid } from "./line-grid";
@@ -40,6 +42,7 @@ export function InvoiceEditor({
   sellers,
   catalog,
   canSend,
+  payments,
 }: {
   id: string;
   number: string;
@@ -53,6 +56,7 @@ export function InvoiceEditor({
   sellers: SellerOption[];
   catalog: CatalogItem[];
   canSend: boolean;
+  payments: PaymentRow[];
 }) {
   const [draft, setDraft] = useState(initialDraft);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
@@ -211,6 +215,16 @@ export function InvoiceEditor({
             patch={patch}
             setDraft={setDraft}
           />
+          <div className="mx-auto mt-5 max-w-3xl">
+            <PaymentsPanel
+              invoiceId={id}
+              currency={draft.currency}
+              totalMinor={calc.totalMinor}
+              payments={payments}
+              canEdit={canEdit}
+              issued={state !== "DRAFT"}
+            />
+          </div>
         </div>
         <div className={`min-h-0 border-line lg:border-l ${tab === "preview" ? "" : "hidden lg:block"}`}>
           <PdfCanvas doc={docProps} />
