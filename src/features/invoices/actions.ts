@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { calculateInvoice } from "@/domain/invoice/calculate";
 import { validateForIssue, type InvoiceDraft } from "@/domain/invoice/schema";
+import { businessDay } from "@/domain/invoice/today";
 import { requireUser } from "@/features/auth/current-user";
 import { db } from "@/infra/db";
 import { allocateInvoiceNumber } from "./allocate-number";
@@ -12,12 +13,6 @@ import { draftToRow } from "./mapping";
 import { writeDraft, type SaveResult } from "./write-draft";
 
 export type { SaveResult } from "./write-draft";
-
-/** Today in IST. The invoice date decides the number's period, so the server's
- *  UTC day would file a 1 Sep IST invoice under August. */
-function todayInIndia(): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
-}
 
 /** A draft has no GST number yet, but the column is unique and not null. */
 const draftNumber = () => `DRAFT-${randomUUID().slice(0, 8)}`;
@@ -39,7 +34,7 @@ export async function createDraftInvoice(): Promise<never> {
   });
   if (!company) throw new Error("No seller company is set up yet");
 
-  const issueDate = todayInIndia();
+  const issueDate = businessDay();
   const draft: InvoiceDraft = {
     companyId: company.id,
     customerId: null,

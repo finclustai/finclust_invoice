@@ -12,7 +12,12 @@ import { db } from "@/infra/db";
  * access of its own, it only saves the scripts from replaying React's
  * server-action wire format.
  */
-const DISABLED = process.env.NODE_ENV === "production";
+/**
+ * Two locks, not one. NODE_ENV alone is a single string away from shipping
+ * this; the explicit opt-in means a production deploy would have to set a
+ * variable named after exactly what it does.
+ */
+const DISABLED = process.env.NODE_ENV === "production" || process.env.ENABLE_DEV_TEST_HOOKS !== "1";
 
 const ACTIONS = { saveDraft, issueInvoice } as const;
 

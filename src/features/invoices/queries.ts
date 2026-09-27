@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "@/infra/db";
 import { deriveStatus, type InvoiceStatus } from "@/domain/invoice/status";
+import { businessDay } from "@/domain/invoice/today";
 import { fromMinor } from "@/domain/money/bigint";
 import type { CurrencyCode } from "@/domain/money/currency";
 import type { CompanyForPdf } from "@/pdf/props";
@@ -90,6 +91,10 @@ export async function listInvoices(opts: { period?: string; search?: string } = 
             OR: [
               { number: { contains: opts.search, mode: "insensitive" as const } },
               { customer: { name: { contains: opts.search, mode: "insensitive" as const } } },
+              // Also the name printed on the invoice: after a customer is
+              // renamed, searching the name on the PDF the CA is holding has
+              // to find it.
+              { customerSnapshot: { path: ["name"], string_contains: opts.search } },
             ],
           }
         : {}),
@@ -109,7 +114,7 @@ export async function listInvoices(opts: { period?: string; search?: string } = 
     },
   });
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = businessDay();
   return rows.map((r) => {
     const total = fromMinor(r.totalMinor);
     const paid = fromMinor(r.paidMinor);

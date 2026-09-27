@@ -12,6 +12,7 @@ import {
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useState } from "react";
 import { GripVertical, Plus, X } from "lucide-react";
 import type { CalculatedInvoice } from "@/domain/invoice/calculate";
 import type { InvoiceLine } from "@/domain/invoice/schema";
@@ -184,15 +185,11 @@ function Row({
         />
       )}
 
-      <input
-        className="field field-sm tnum text-right"
-        type="number"
-        min={0}
-        step="0.001"
+      <QtyInput
         value={line.qty}
         disabled={disabled}
-        aria-label={`Line ${index + 1} quantity`}
-        onChange={(e) => onPatch({ qty: Number(e.target.value) || 0 })}
+        label={`Line ${index + 1} quantity`}
+        onChange={(qty) => onPatch({ qty })}
         onKeyDown={onKeyDown}
       />
 
@@ -220,5 +217,64 @@ function Row({
         </button>
       )}
     </div>
+  );
+}
+
+/**
+ * Quantity, limited to the 3 decimals the database stores. Rejecting at the
+ * cell beats letting the server refuse the whole save: otherwise one bad cell
+ * parks autosave in an error state and the message appears far from the cause.
+ */
+function QtyInput({
+  value,
+  disabled,
+  label,
+  onChange,
+  onKeyDown,
+}: {
+  value: number;
+  disabled: boolean;
+  label: string;
+  onChange: (qty: number) => void;
+  onKeyDown: (e: React.KeyboardEvent) => void;
+}) {
+  const [problem, setProblem] = useState<string | null>(null);
+  return (
+    <span className="block">
+      <input
+        className={`field field-sm tnum w-full text-right ${problem ? "border-red" : ""}`}
+        type="number"
+        min={0}
+        step="0.001"
+        value={value}
+        disabled={disabled}
+        aria-label={label}
+        aria-invalid={problem ? true : undefined}
+        onChange={(e) => {
+          const next = Number(e.target.value);
+          if (e.target.value === "" || Number.isNaN(next)) {
+            setProblem(null);
+            onChange(0);
+            return;
+          }
+          if (next < 0) {
+            setProblem("Can’t be negative");
+            return;
+          }
+          if (Math.abs(Math.round(next * 1000) - next * 1000) > 1e-6) {
+            setProblem("Up to 3 decimals");
+            return;
+          }
+          setProblem(null);
+          onChange(next);
+        }}
+        onKeyDown={onKeyDown}
+      />
+      {problem && (
+        <span role="alert" className="hint block text-right text-red">
+          {problem}
+        </span>
+      )}
+    </span>
   );
 }

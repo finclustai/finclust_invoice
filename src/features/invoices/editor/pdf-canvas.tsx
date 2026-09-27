@@ -9,10 +9,12 @@ const RERENDER_MS = 400;
 
 /**
  * The live preview. Renders the very same component the download route uses,
- * so the file someone receives cannot differ from what they approved here.
+ * so the file a client receives cannot differ from what was approved here.
  *
- * The previous page stays on screen while the next one renders — re-rendering
- * a PDF on every keystroke would otherwise flash white continuously.
+ * usePDF keeps the previous blob URL in state while the next render runs, so
+ * typing never flashes the panel white. The iframe's `key` is held constant
+ * and only its `src` changes, which keeps the browser's PDF viewer from
+ * jumping back to page one every time typing pauses on a long invoice.
  */
 export default function PdfCanvas({ doc }: { doc: InvoiceDocumentProps }) {
   const [settled, setSettled] = useState(doc);
@@ -25,35 +27,41 @@ export default function PdfCanvas({ doc }: { doc: InvoiceDocumentProps }) {
   }, [doc]);
 
   const [instance, update] = usePDF({ document: <InvoiceDocument doc={settled} /> });
-  const shown = useRef<string | null>(null);
 
+  // Skips the first run: usePDF has already rendered the initial document, and
+  // updating again here would render it twice on mount.
+  const mounted = useRef(false);
   useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
     update(<InvoiceDocument doc={settled} />);
   }, [settled, update]);
 
-  if (instance.url) shown.current = instance.url;
-
   if (instance.error) {
     return (
-      <div className="grid h-full place-items-center p-6 text-center">
-        <p className="error-line">Could not draw the preview. The invoice itself is safe — try reloading.</p>
+      <div className="grid h-full place-items-center bg-sand p-6 text-center">
+        <p className="error-line">
+          Could not draw the preview. The invoice itself is safe — try reloading.
+        </p>
       </div>
     );
   }
 
   return (
     <div className="relative h-full bg-sand">
-      {shown.current ? (
+      {instance.url ? (
         <iframe
-          // #toolbar=0 hides the browser viewer's chrome, so the page itself is the frame.
-          src={`${shown.current}#toolbar=0&navpanes=0&view=FitH`}
+          // #toolbar=0 hides the viewer's own chrome, so the panel is the frame.
+          src={`${instance.url}#toolbar=0&navpanes=0&view=FitH`}
           title="Invoice preview"
           className="h-full w-full border-0"
         />
       ) : (
         <div className="grid h-full place-items-center text-sm text-mid">Drawing the invoice…</div>
       )}
-      {instance.loading && shown.current && (
+      {instance.loading && instance.url && (
         <span className="absolute top-3 right-3 rounded-full bg-paper/90 px-2 py-0.5 text-xs text-mid shadow-soft">
           updating…
         </span>
